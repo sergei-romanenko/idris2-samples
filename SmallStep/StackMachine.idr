@@ -71,10 +71,10 @@ compile (t1 + t2) = Seq (Seq (compile t1) (compile t2)) Add
 seq_assoc : exec (Seq (Seq c1 c2) c3) s = exec (Seq c1 (Seq c2 c3)) s
 seq_assoc = Calc $
   |~ exec (Seq (Seq c1 c2) c3) s
-  ~~ exec c3 (exec (Seq c1 c2) s) ...(Refl)
-  ~~ exec c3 (exec c2 (exec c1 s)) ...(Refl)
-  ~~ exec (Seq c2 c3) (exec c1 s) ...(Refl)
-  ~~ exec (Seq c1 (Seq c2 c3)) s ...(Refl)
+  ~~ exec c3 (exec (Seq c1 c2) s) ...( Refl )
+  ~~ exec c3 (exec c2 (exec c1 s)) ...( Refl )
+  ~~ exec (Seq c2 c3) (exec c1 s) ...( Refl )
+  ~~ exec (Seq c1 (Seq c2 c3)) s ...( Refl )
 
 -- Here is another proof, which is shorter, but is more mysterious.
 
@@ -88,22 +88,22 @@ correct : (t : Tm) -> (s : Stack i) ->
 correct (Val n) s = Calc $ -- Refl
   |~ exec (compile (Val n)) s
   ~~ exec (Push n) s ... (Refl)
-  ~~ n :: s ...(Refl)
+  ~~ n :: s ...( Refl )
   ~~ eval (Val n) :: s ... (Refl)
 correct (t1 + t2) s = Calc $
   |~ exec (compile (t1 + t2)) s
   ~~ exec (Seq (Seq (compile t1) (compile t2)) Add) s
-        ...(Refl)
+        ...( Refl )
   ~~ exec Add (exec (compile t2) (exec (compile t1) s))
-        ...(Refl)
+        ...( Refl )
   ~~ exec Add (exec (compile t2) (eval t1 :: s))
-        ...(cong (exec Add . exec (compile t2)) (correct t1 s))
+        ...( cong (exec Add . exec (compile t2)) (correct t1 s) )
   ~~ exec Add (eval t2 :: (eval t1 :: s)) 
-        ...(cong (exec Add) (correct t2 (eval t1 :: s)))
+        ...( cong (exec Add) (correct t2 (eval t1 :: s)) )
   ~~ (eval t1 + eval t2) :: s
-        ...(Refl)
+        ...( Refl )
   ~~ eval (t1 + t2) :: s
-        ...(Refl)
+        ...( Refl )
 
 
 -- Here is another proof, which is shorter, but is more mysterious.
@@ -123,28 +123,26 @@ correct' (t1 + t2) s =
 ex_code : (t : Tm) ->
   (c : Code i (1 + i) ** (s : Stack i) -> exec c s = eval t :: s)
 ex_code (Val n) =
-  (Push n ** (\s => Calc $
+  (Push n ** \s => Calc $
     |~ exec (Push n) s
-    ~~ n :: s             ...(Refl)
-    ~~ eval (Val n) :: s  ...(Refl)))
-ex_code (t1 + t2) =
-  let (c1 ** p1) = ex_code {i=i} t1 in
-  let (c2 ** p2) = ex_code {i=1+i} t2 in
-  let n1 = eval t1 in
-  let n2 = eval t2 in
-  (Seq (Seq c1 c2) Add ** \s => Calc $
-    |~ exec (Seq (Seq c1 c2) Add) s
-    ~~ exec Add (exec c2 (exec c1 s))
-        ...(Refl)
-    ~~ exec Add (exec c2 (eval t1 :: s))
-        ...(cong (exec Add . exec c2) (p1 s))
-    ~~ exec Add (eval t2 :: (eval t1 :: s))
-        ...(cong (exec Add) (p2 (eval t1 :: s)))
-    ~~ eval t1 + eval t2 :: s
-        ...(?ex_code_rhs_2)
-    ~~ eval (t1 + t2) :: s
-        ...(Refl)
+    ~~ n :: s             ...( Refl )
+    ~~ eval (Val n) :: s  ...( Refl )
   )
+ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
+  _ | ((c1 ** p1), (c2 **  p2)) =
+    (Seq (Seq c1 c2) Add ** \s => Calc $
+      |~ exec (Seq (Seq c1 c2) Add) s
+      ~~ exec Add (exec c2 (exec c1 s))
+          ...( Refl )
+      ~~ exec Add (exec c2 (eval t1 :: s))
+          ...( cong (exec Add . exec c2) (p1 s) )
+      ~~ exec Add (eval t2 :: (eval t1 :: s))
+          ...( cong (exec Add) (p2 (eval t1 :: s)) )
+      ~~ eval t1 + eval t2 :: s
+          ...( Refl )
+      ~~ eval (t1 + t2) :: s
+          ...( Refl )
+    )
 
 --
 -- `ex_code` produces the same code as `compile`.
@@ -207,24 +205,22 @@ flatten Add p = IAdd # p
 
 -- `flatten` is correct.
 
-{-
 flatten_correct' : (c : Code i j) -> (p : Prog j k) -> (s : Stack i) ->
   p_exec p (exec c s) = p_exec (flatten c p) s
-flatten_correct' (Seq c1 c2) p s =
-  (p_exec p (exec (Seq c1 c2) s))
-    ={ Refl }=
-  (p_exec p (exec c2 (exec c1 s)))
-    ={ flatten_correct' c2 p (exec c1 s) }=
-  (p_exec (flatten c2 p) (exec c1 s))
-    ={ flatten_correct' c1 (flatten c2 p) s }=
-  (p_exec (flatten c1 (flatten c2 p)) s)
-    ={ Refl }=
-  (p_exec (flatten (Seq c1 c2) p) s)
-  QED
+flatten_correct' (Seq c1 c2) p s = Calc $
+  |~ p_exec p (exec (Seq c1 c2) s)
+  ~~ p_exec p (exec c2 (exec c1 s))
+    ...( Refl )
+  ~~ p_exec (flatten c2 p) (exec c1 s)
+    ...( flatten_correct' c2 p (exec c1 s) )
+  ~~ p_exec (flatten c1 (flatten c2 p)) s
+    ...( flatten_correct' c1 (flatten c2 p) s )
+  ~~ p_exec (flatten (Seq c1 c2) p) s
+    ...( Refl )
 flatten_correct' (Push n) p s =
-  (p_exec p (n :: s)) QED
+  Refl {x = p_exec p (n :: s)}
 flatten_correct' Add p (n2 :: n1 :: s) =
-  (p_exec p (n1 + n2 :: s)) QED
+  Refl {x = p_exec p (n1 + n2 :: s)}
 
 flatten_correct : (c : Code i j) -> (s : Stack i) ->
   exec c s = p_exec (flatten c EOP) s
@@ -235,16 +231,14 @@ flatten_correct c s = flatten_correct' c EOP s
 compile_p_compile : (t : Tm) -> (p : Prog (1 + i) j) ->
   flatten (compile t) p = p_compile t p
 compile_p_compile (Val n) p =
-  (IPush n # p) QED
-compile_p_compile (t1 + t2) p =
-  (flatten (compile (t1 + t2)) p)
-    ={ Refl }=
-  (flatten (compile t1) (flatten (compile t2) (IAdd # p)))
-    ={ compile_p_compile t1 (flatten (compile t2) (IAdd # p)) }=
-  (p_compile t1 (flatten (compile t2) (IAdd # p)))
-    ={ cong {f= p_compile t1} (compile_p_compile t2 (IAdd # p)) }=
-  (p_compile t1 (p_compile t2 (IAdd # p)))
-    ={ Refl }=
-  (p_compile (t1 + t2) p)
-  QED
- -}
+  Refl{x = IPush n # p}
+compile_p_compile (t1 + t2) p = Calc $
+  |~ flatten (compile (t1 + t2)) p
+  ~~ flatten (compile t1) (flatten (compile t2) (IAdd # p))
+    ...( Refl )
+  ~~ (p_compile t1 (flatten (compile t2) (IAdd # p)))
+    ...( compile_p_compile t1 (flatten (compile t2) (IAdd # p)) )
+  ~~ (p_compile t1 (p_compile t2 (IAdd # p)))
+    ...( cong (p_compile t1) (compile_p_compile t2 (IAdd # p)) )
+  ~~ (p_compile (t1 + t2) p)
+    ...( Refl )
