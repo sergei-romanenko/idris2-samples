@@ -1,7 +1,7 @@
 module Termination
 
-import Data.Nat;
-import Control.WellFounded;
+import Data.Nat
+import Control.WellFounded
 
 %default total
 
