@@ -14,6 +14,7 @@ This (slightly modified) code is from
 module StackMachine
 
 import Syntax.PreorderReasoning
+import Syntax.WithProof
 import Data.Vect
 
 %default total
@@ -150,13 +151,13 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 -- `compile` from `ex_code` (unlike Coq).
 --
 
-{- 
+{-
 correct'' : {i : Nat} -> (t : Tm) ->
    compile {i} t = fst (ex_code {i} t)
 correct'' (Val n) = Refl
-correct'' {i} (t1 + t2) with (ex_code {i=i} t1) proof eq1
-  | (c1 ** p1) with (ex_code {i=1+i} t2) proof eq2
-    | (c2 ** p2) =
+correct'' {i} (t1 + t2) with (@@ ex_code {i=i} t1)
+  _ | ((c1 ** p1) ** eq1) with (@@ ex_code {i=1+i} t2)
+    _ | ((c2 ** p2) ** eq2) =
       rewrite correct'' {i=i} t1 in
       rewrite correct'' {i=1+i} t2 in
       rewrite sym eq1 in
