@@ -1,5 +1,7 @@
 module CurryHoward
 
+import Data.Nat
+
 %default total
 
 -- Implication = `->`.
@@ -76,28 +78,49 @@ distrib_ep_2 : Either (p , q) (p , r) -> (p , (Either q r))
 distrib_ep_2 = either (fst &&& (Left . snd))
                       (fst &&& (Right . snd))
 
--- True = `()` and has a trivial proof.
+-- `()` can represent "true" and has a trivial proof.
 
 triviallyTrue : () -- Unit
 triviallyTrue = () -- MkUnit
 
--- False = `Void` and has no proof.
+-- `Void` can represent "false" and has no proof.
 
-triviallyFalse : Void
-triviallyFalse = ?r
+-- triviallyFalse : Void
+-- triviallyFalse = ?r
 
 -- Negation = `Not`.
 
--- Not : Type -> Type
--- Not a = a -> Void
+namespace MyNot
 
--- void : Void -> a
--- void _ impossible
+  Not : Type -> Type
+  Not a = a -> Void
+
+  void : Void -> a
+  void _ impossible
+
+%hint
+ne_0_1 : Not (Z = S Z) -- Z = S Z -> Void
+ne_0_1 Refl impossible
+
+ne_2_3 : Not (S (S Z) = S (S (S Z)))
+ne_2_3 Refl impossible
+
+ne_m_sm : (m : Nat) -> Not (m = S(m))
+ne_m_sm Z eq_0_1 = ne_0_1 eq_0_1
+ne_m_sm (S m') eq_sm'_ssm' =
+  the (m' = S m' -> Void) (ne_m_sm m') (
+    the (m' = S m')
+      $ cong pred $
+    the (S m' = S (S m')) eq_sm'_ssm'
+  )
 
 -- Some basic facts about negation.
 
 contradict : Not (p , Not p)
-contradict (p, np) = void (np p)
+contradict (p, np) = np p
+
+contradict' : (p -> Void) -> p -> Void
+contradict' np p = np p
 
 contrapos : (p -> q) -> Not q -> Not p
 contrapos pq nq p = nq (pq p)
