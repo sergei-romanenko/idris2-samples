@@ -20,29 +20,29 @@ namespace SKI
     I' : p -> p
     I' = S K (K {q = p})
 
-mp : (p -> q) -> p -> q
-mp f x = f x
+mp : {P, Q : Type} -> (P -> Q) -> P -> Q
+mp pq p = pq p
 
-comp : (p -> q) -> (q -> r) -> p -> r
-comp f g x = g (f x)
+comp : {P, Q, R : Type} -> (P -> Q) -> (Q -> R) -> P -> R
+comp pq qr p = qr (pq p)
 
-comp' : (p -> q) -> (q -> r) -> p -> r
-comp' f g = g . f
+comp' : {P, Q, R : Type} -> (P -> Q) -> (Q -> R) -> P -> R
+comp' pq qr = qr . pq
 
 -- Conjunction = `Pair`.
 -- A proof of (P , Q) is a proof of P and a proof of Q.
 
 -- `Pair` is commutative.
 
-pair_comm : (p , q) -> (q , p)
-pair_comm (x, y) = (y, x)
+pair_comm : {P, Q : Type} -> (P , Q) -> (Q , P)
+pair_comm (p, q) = (q, p)
 
 infixr 3 &&&
 
-(&&&) : (p -> q) -> (p -> r) -> p -> (q , r)
-f &&& g = \x => (f x, g x)
+(&&&) : {P, Q, R : Type} -> (P -> Q) -> (P -> R) -> P -> (Q , R)
+pq &&& pr = \p => (pq p, pr p)
 
-pair_comm' : (p , q) -> (q , p)
+pair_comm' : {P, Q : Type} -> (P , Q) -> (Q , P)
 pair_comm' = snd &&& fst
 
 -- Disjunction = `Either`
@@ -51,30 +51,36 @@ pair_comm' = snd &&& fst
 
 -- `Either` is commutative.
 
-either_comm : p `Either` q -> q `Either` p
+either_comm : {P, Q : Type} ->
+    P `Either` Q -> Q `Either` P
 either_comm (Left p) = Right p
 either_comm (Right q) = Left q
 
-either_comm' : p `Either` q -> q `Either` p
+either_comm' : {P, Q : Type} ->
+    P `Either` Q -> Q `Either` P
 either_comm' = either Right Left
 
 -- Distributivity of `Pair` over `Either`.
 
-distrib_pe_1 :  (p , Either q r) -> Either (p , q) (p , r)
+distrib_pe_1 : {P, Q, R : Type} ->
+    (P , Either Q R) -> Either (P , Q) (P , R)
 distrib_pe_1 (p, (Left q)) = Left (p, q)
 distrib_pe_1 (p, (Right r)) = Right (p, r)
 
-distrib_pe_2 :  (p , Either q r) -> Either (p , q) (p , r)
+distrib_pe_2 : {P, Q, R : Type} ->
+    (P , Either Q R) -> Either (P , Q) (P , R)
 distrib_pe_2 (p, qr) =
   either (Left . MkPair p) (Right . MkPair p) qr
 
 -- The other direction.
 
-distrib_ep_1 : Either (p , q) (p , r) -> (p , (Either q r))
+distrib_ep_1 : {P, Q, R : Type} ->
+    Either (P , Q) (P , R) -> (P , (Either Q R))
 distrib_ep_1 (Left (p, q)) = (p , (Left q))
 distrib_ep_1 (Right (p , r)) = (p , (Right r))
 
-distrib_ep_2 : Either (p , q) (p , r) -> (p , (Either q r))
+distrib_ep_2 : {P, Q, R : Type} ->
+    Either (P , Q) (P , R) -> (P , (Either Q R))
 distrib_ep_2 = either (fst &&& (Left . snd))
                       (fst &&& (Right . snd))
 
@@ -116,26 +122,41 @@ ne_m_sm (S m') eq_sm'_ssm' =
 
 -- Some basic facts about negation.
 
-contradict : Not (p , Not p)
-contradict (p, np) = np p
+contradict : {P : Type} -> Not (P , Not P)
+-- contradict : {P : Type} -> (P , P -> Void) -> Void
+contradict (p, np) =
+  the Void (
+    (the (P -> Void) np)
+    (the P p))
 
-contradict' : (p -> Void) -> p -> Void
-contradict' np p = np p
+contradict' : {P : Type} -> (Not P) -> P -> Void
+-- contradict' : (p -> Void) -> p -> Void
+contradict' np p =
+  the Void (
+    (the (P -> Void) np)
+    (the P p))
 
-contrapos : (p -> q) -> Not q -> Not p
-contrapos pq nq p = nq (pq p)
+contrapos : {P, Q : Type} -> (P -> Q) -> Not Q -> Not P
+-- contrapos : {P, Q : Type} -> (P -> Q) -> (Q -> Void) -> (P -> Void)
+contrapos pq nq p =
+  the Void (
+    (the (Q -> Void) nq)
+    (the Q (
+      (the (P -> Q) pq)
+      (the P p))))
+
 
 -- We show that Peirce's law is equivalent to the Law of
 -- Excluded Middle (EM).
 
-em_i_peirce : ((r : Type) -> Either r (Not r)) ->
-  (p, q : Type) -> ((p -> q) -> p) -> p
+em_i_peirce : ((R : Type) -> Either R (Not R)) ->
+    (P, Q : Type) -> ((P -> Q) -> P) -> P
 em_i_peirce e p q pq_p with (e p)
   _ | (Left p') = p'
-  _ | (Right np') = pq_p (\p => void (np' p))
+  _ | (Right np') = pq_p (\z => void (np' z))
 
-peirce_i_em : ((p, q : Type) -> ((p -> q) -> p) -> p) ->
-  ((r : Type) -> Either r (Not r))
+peirce_i_em : ((P, Q : Type) -> ((P -> Q) -> P) -> P) ->
+  ((R : Type) -> Either R (Not R))
 peirce_i_em h r =
   h (Either r (Not r)) Void
     (\r_nr => Right (\r => r_nr (Left r)))
@@ -144,12 +165,12 @@ peirce_i_em h r =
 --   (x : A) ->  P x means that (P a) is true (inhabited) for all (a : A).
 
 all_pair_lem_1 : {A : Type} -> {P, Q : A -> Type} -> 
-  ((a : A) -> (P a, Q a)) -> (((a : A) -> P a), ((a : A) -> Q a))
+    ((a : A) -> (P a, Q a)) -> (((a : A) -> P a), ((a : A) -> Q a))
 all_pair_lem_1 a_pq =
   ((\a => fst (a_pq a)), (\a => snd (a_pq a)))
 
 all_pair_lem_2 : {A : Type} -> {P, Q : A -> Type} -> 
-  (((a : A) -> P a) , ((a : A) -> Q a)) -> ((a : A) -> (P a, Q a)) 
+    (((a : A) -> P a) , ((a : A) -> Q a)) -> ((a : A) -> (P a, Q a)) 
 all_pair_lem_2 (a_p, a_q) a =
   (a_p a, a_q a)
 
@@ -159,14 +180,18 @@ all_pair_lem_2 (a_p, a_q) a =
 -- `(a : A ** P)` means `(a : DPair A (\a => P a)`
 -- `a ** p` means `MkDPair a (\a => p)`
 
-all_ex_lem_1 : forall p. ((x : a) -> p x -> q) -> (x ** p x) -> q
-all_ex_lem_1 a_pa_q (a ** pa) = a_pa_q a pa
+all_ex_lem_1 : {A, Q : Type} -> {P : A -> Type} ->
+    ((x : A) -> P x -> Q) -> (y ** P y) -> Q
+all_ex_lem_1 x_px_q (y ** py) = x_px_q y py
 
-all_ex_lem_2 : forall p. ((x ** p x) -> q) -> (x : a) -> p x -> q
-all_ex_lem_2 a'pa_q a pa = a'pa_q (a ** pa)
+all_ex_lem_2 : {A, Q : Type} -> {P : A -> Type} ->
+    ((x ** P x) -> Q) -> (y : A) -> P y -> Q
+all_ex_lem_2 x'px_q y py = x'px_q (y ** py)
 
-frobenius_to : {p : a -> Type} -> (x ** (q, p x)) -> (q, (x ** p x))
+frobenius_to : {A, Q : Type} -> {P : A -> Type} ->
+    (x ** (Q, P x)) -> (Q, (x ** P x))
 frobenius_to (x ** (q , px)) = (q, (x ** px))
 
-frobenius_from : {p : a -> Type} -> (q, (x ** p x)) -> (x ** (q, p x))
+frobenius_from : {A, Q : Type} -> {P : A -> Type} ->
+    (Q, (x ** P x)) -> (x ** (Q, P x))
 frobenius_from (q, (x ** px)) = (x ** (q, px))
