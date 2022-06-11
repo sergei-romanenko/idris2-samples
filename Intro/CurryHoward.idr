@@ -49,6 +49,28 @@ pair_comm' = snd &&& fst
 -- A proof of `Either P Q` is either a proof of P labeled with `Left` or
 -- a proof of Q labeled with `Right`.
 
+namespace MyEither
+
+  data Either : (a : Type) -> (b : Type) -> Type where
+    Left : forall a, b. (x : a) -> Either a b
+    Right : forall a, b. (x : b) -> Either a b
+
+mutual
+
+  data Even : Nat -> Type where
+    E0 : Even Z
+    E1 : Odd n -> Even (S n)
+
+  data Odd : Nat -> Type where
+    O1 : Even n -> Odd (S n)
+
+even_or_odd : (n : Nat) -> Either (Even n) (Odd n)
+even_or_odd Z = Left $ the (Even 0) E0
+even_or_odd (S n') with (even_or_odd n')
+  _ | (Left even_n') = Right (O1 even_n')
+  _ | (Right odd_n') = Left (E1 odd_n')
+
+
 -- `Either` is commutative.
 
 either_comm : {P, Q : Type} ->
@@ -103,6 +125,12 @@ namespace MyNot
 
   void : Void -> a
   void _ impossible
+
+not_even_and_odd : (n : Nat) -> Not (Even n, Odd n)
+-- not_even_and_odd : (n : Nat) -> (Even n, Odd n) -> Void
+not_even_and_odd Z (E0, O1 _) impossible
+not_even_and_odd (S n') (E1 odd_n', O1 even_n') =
+  not_even_and_odd n' (even_n', odd_n')
 
 %hint
 ne_0_1 : Not (Z = S Z) -- Z = S Z -> Void

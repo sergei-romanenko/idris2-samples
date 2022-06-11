@@ -113,9 +113,16 @@ correct' : (t : Tm) -> (s : Stack i) ->
   exec (compile t) s = eval t :: s
 correct' (Val n) s = Refl
 correct' (t1 + t2) s =
-  rewrite correct' t1 s in
-  rewrite correct' t2 (eval t1 :: s) in
-  Refl
+  the (exec (compile (t1 + t2)) s = eval (t1 + t2) :: s)
+    $ id $
+  the (exec Add (exec (compile t2) (exec (compile t1) s)) =
+        (eval t1 + eval t2) :: s)
+    $ rewrite correct' t1 s in
+  the (exec Add (exec (compile t2) (eval t1 :: s)) =
+        (eval t1 + eval t2) :: s)
+    $ rewrite correct' t2 (eval t1 :: s) in
+  the ((eval t1 + eval t2) :: s = (eval t1 + eval t2) :: s)
+    $ Refl
 
 --
 -- A compiler that is correct "by construction".
@@ -152,14 +159,14 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 --
 
 {-
-correct'' : (t : Tm) ->
+corr_ex_code : (t : Tm) ->
   compile {i} t = fst (ex_code {i} t)
-correct'' (Val n) = Refl
-correct'' {i} (t1 + t2) with (@@ ex_code {i=i} t1)
+corr_ex_code (Val n) = Refl
+corr_ex_code {i} (t1 + t2) with (@@ ex_code {i=i} t1)
   _ | ((c1 ** p1) ** eq1) with (@@ ex_code {i=1+i} t2)
     _ | ((c2 ** p2) ** eq2) =
-      rewrite correct'' {i=i} t1 in
-      rewrite correct'' {i=1+i} t2 in
+      rewrite corr_ex_code {i=i} t1 in
+      rewrite corr_ex_code {i=1+i} t2 in
       rewrite sym eq1 in
       rewrite sym eq2 in
       Refl
