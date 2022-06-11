@@ -1,4 +1,4 @@
-module Termination
+module Intro.Termination
 
 import Data.Nat
 import Control.WellFounded

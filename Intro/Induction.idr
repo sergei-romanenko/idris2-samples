@@ -1,4 +1,4 @@
-module Induction
+module Intro.Induction
 
 import Syntax.PreorderReasoning
 import Data.Nat

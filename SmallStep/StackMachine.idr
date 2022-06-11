@@ -11,7 +11,7 @@ This (slightly modified) code is from
   http://fplab.bitbucket.org/posts/2007-08-07-proof-by-smugness.html
 -}
 
-module StackMachine
+module SmallStep.StackMachine
 
 import Syntax.PreorderReasoning
 import Syntax.WithProof
@@ -152,8 +152,8 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 --
 
 {-
-correct'' : {i : Nat} -> (t : Tm) ->
-   compile {i} t = fst (ex_code {i} t)
+correct'' : (t : Tm) ->
+  compile {i} t = fst (ex_code {i} t)
 correct'' (Val n) = Refl
 correct'' {i} (t1 + t2) with (@@ ex_code {i=i} t1)
   _ | ((c1 ** p1) ** eq1) with (@@ ex_code {i=1+i} t2)

@@ -1,0 +1,11 @@
+package idris2-samples
+
+depends = contrib
+
+--opts = "-p contrib"
+
+--main = Main
+--executable = idris2-samples
+
+-- modules
+--   = Main

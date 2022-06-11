@@ -1,5 +1,5 @@
-import Intro
-import Induction
-import CurryHoward
-import Termination
-import Coinduction
+import Intro.Intro
+import Intro.Induction
+import Intro.CurryHoward
+import Intro.Termination
+import Intro.Coinduction

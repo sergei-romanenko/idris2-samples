@@ -1,4 +1,4 @@
-module Coinduction
+module Intro.Coinduction
 
 import Data.Stream
 

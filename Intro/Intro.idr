@@ -1,4 +1,4 @@
-module Intro
+module Intro.Intro
 
 import Syntax.PreorderReasoning
 

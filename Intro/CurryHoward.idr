@@ -1,4 +1,4 @@
-module CurryHoward
+module Intro.CurryHoward
 
 import Data.Nat
 
@@ -112,7 +112,11 @@ ne_2_3 : Not (S (S Z) = S (S (S Z)))
 ne_2_3 Refl impossible
 
 ne_m_sm : (m : Nat) -> Not (m = S(m))
-ne_m_sm Z eq_0_1 = ne_0_1 eq_0_1
+-- ne_m_sm : (m : Nat) -> m = S m -> Void
+ne_m_sm Z eq_0_1 =
+  the Void (
+    (the (0 = 1 -> Void) (ne_0_1))
+    (the (0 = 1) eq_0_1))
 ne_m_sm (S m') eq_sm'_ssm' =
   the (m' = S m' -> Void) (ne_m_sm m') (
     the (m' = S m')
