@@ -17,6 +17,8 @@ import Syntax.PreorderReasoning
 import Syntax.WithProof
 import Data.Vect
 
+import Intro.Singleton
+
 %default total
 
 --
@@ -26,14 +28,40 @@ import Data.Vect
 infixl 8 +
 
 data Tm : Type where
-  Val : (n : Nat) -> Tm
+  Cst : (n : Nat) -> Tm
   (+) : (t1, t2 : Tm) -> Tm
 
 -- Big-step evaluator
 
 eval : Tm -> Nat
-eval (Val n) = n
+eval (Cst n) = n
 eval (t1 + t2) = eval t1 + eval t2
+
+
+-- Natural semantics
+
+data Eval : (t : Tm) -> (n : Nat) -> Type where
+  EvVal  : Eval (Cst n) n
+  EvPlus : Eval t1 n1 -> Eval t2 n2 -> Eval (t1 + t2) (n1 + n2)
+
+corr_eval : (t : Tm) -> Eval t (eval t)
+corr_eval (Cst n) = EvVal
+corr_eval (t1 + t2) = EvPlus (corr_eval t1) (corr_eval t2)
+
+-- data Singleton : a -> Type where
+--      Val : (x : a) -> Singleton x
+
+eval' : (t : Tm) -> {auto e : Eval t n} -> Singleton n
+eval' (Cst n) {e = EvVal} = Val n
+eval' (t1 + t2) {e = EvPlus e1 e2} =
+  let Val n1 = eval' t1 {e = e1} in
+  let Val n2 = eval' t2 {e = e2} in
+  Val (n1 + n2)
+
+test_eval' : eval' ((Cst 2) + (Cst 3 + Cst 4))
+  {e = EvPlus EvVal (EvPlus EvVal EvVal)} = Val(9)
+test_eval' = Refl
+
 
 --
 -- Virtual machine
@@ -64,7 +92,7 @@ exec Add (n2 :: (n1 :: s)) = (n1 + n2) :: s
 -- Compiler
 
 compile : (t : Tm) -> Code i (1 + i)
-compile (Val n) = Push n
+compile (Cst n) = Push n
 compile (t1 + t2) = Seq (Seq (compile t1) (compile t2)) Add
 
 -- `Seq` is associative with respect to `exec`.
@@ -84,23 +112,23 @@ seq_assoc' = Refl
 
 -- `compile` is correct with respect to `exec`.
 
-correct : (t : Tm) -> (s : Stack i) ->
+correct_compile : (t : Tm) -> (s : Stack i) ->
   exec (compile t) s = eval t :: s
-correct (Val n) s = Calc $ -- Refl
-  |~ exec (compile (Val n)) s
+correct_compile (Cst n) s = Calc $ -- Refl
+  |~ exec (compile (Cst n)) s
   ~~ exec (Push n) s ... (Refl)
   ~~ n :: s ...( Refl )
-  ~~ eval (Val n) :: s ... (Refl)
-correct (t1 + t2) s = Calc $
+  ~~ eval (Cst n) :: s ... (Refl)
+correct_compile (t1 + t2) s = Calc $
   |~ exec (compile (t1 + t2)) s
   ~~ exec (Seq (Seq (compile t1) (compile t2)) Add) s
         ...( Refl )
   ~~ exec Add (exec (compile t2) (exec (compile t1) s))
         ...( Refl )
   ~~ exec Add (exec (compile t2) (eval t1 :: s))
-        ...( cong (exec Add . exec (compile t2)) (correct t1 s) )
+        ...( cong (exec Add . exec (compile t2)) (correct_compile t1 s) )
   ~~ exec Add (eval t2 :: (eval t1 :: s)) 
-        ...( cong (exec Add) (correct t2 (eval t1 :: s)) )
+        ...( cong (exec Add) (correct_compile t2 (eval t1 :: s)) )
   ~~ (eval t1 + eval t2) :: s
         ...( Refl )
   ~~ eval (t1 + t2) :: s
@@ -109,18 +137,18 @@ correct (t1 + t2) s = Calc $
 
 -- Here is another proof, which is shorter, but is more mysterious.
 
-correct' : (t : Tm) -> (s : Stack i) ->
+correct_compile' : (t : Tm) -> (s : Stack i) ->
   exec (compile t) s = eval t :: s
-correct' (Val n) s = Refl
-correct' (t1 + t2) s =
+correct_compile' (Cst n) s = Refl
+correct_compile' (t1 + t2) s =
   the (exec (compile (t1 + t2)) s = eval (t1 + t2) :: s)
     $ id $
   the (exec Add (exec (compile t2) (exec (compile t1) s)) =
         (eval t1 + eval t2) :: s)
-    $ rewrite correct' t1 s in
+    $ rewrite correct_compile' t1 s in
   the (exec Add (exec (compile t2) (eval t1 :: s)) =
         (eval t1 + eval t2) :: s)
-    $ rewrite correct' t2 (eval t1 :: s) in
+    $ rewrite correct_compile' t2 (eval t1 :: s) in
   the ((eval t1 + eval t2) :: s = (eval t1 + eval t2) :: s)
     $ Refl
 
@@ -130,11 +158,11 @@ correct' (t1 + t2) s =
 
 ex_code : (t : Tm) ->
   (c : Code i (1 + i) ** (s : Stack i) -> exec c s = eval t :: s)
-ex_code (Val n) =
+ex_code (Cst n) =
   (Push n ** \s => Calc $
     |~ exec (Push n) s
     ~~ n :: s             ...( Refl )
-    ~~ eval (Val n) :: s  ...( Refl )
+    ~~ eval (Cst n) :: s  ...( Refl )
   )
 ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
   _ | ((c1 ** p1), (c2 **  p2)) =
@@ -161,7 +189,7 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 {-
 corr_ex_code : (t : Tm) ->
   compile {i} t = fst (ex_code {i} t)
-corr_ex_code (Val n) = Refl
+corr_ex_code (Cst n) = Refl
 corr_ex_code {i} (t1 + t2) with (@@ ex_code {i=i} t1)
   _ | ((c1 ** p1) ** eq1) with (@@ ex_code {i=1+i} t2)
     _ | ((c2 ** p2) ** eq2) =
@@ -200,7 +228,7 @@ p_exec (IAdd # p) (n2 :: n1 :: s) = p_exec p ((n1 + n2) :: s)
 -- Compiler
 
 p_compile : (t : Tm) -> (p : Prog (1 + i) j) -> Prog i j
-p_compile (Val n) p = IPush n # p
+p_compile (Cst n) p = IPush n # p
 p_compile (t1 + t2) p =
   p_compile t1 (p_compile t2 (IAdd # p))
 
@@ -238,7 +266,7 @@ flatten_correct c s = flatten_correct' c EOP s
 
 compile_p_compile : (t : Tm) -> (p : Prog (1 + i) j) ->
   flatten (compile t) p = p_compile t p
-compile_p_compile (Val n) p =
+compile_p_compile (Cst n) p =
   Refl{x = IPush n # p}
 compile_p_compile (t1 + t2) p = Calc $
   |~ flatten (compile (t1 + t2)) p
