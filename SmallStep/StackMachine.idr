@@ -16,8 +16,7 @@ module SmallStep.StackMachine
 import Syntax.PreorderReasoning
 import Syntax.WithProof
 import Data.Vect
-
-import Intro.Singleton
+import Data.Singleton
 
 %default total
 

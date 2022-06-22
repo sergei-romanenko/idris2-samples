@@ -20,8 +20,10 @@ public export
 (~>) : (p : a -> b) -> (q : b -> c) -> (a -> c)
 (~>) p q = q . p
 
+{-
 tr : (p : a -> b) -> (q : b -> c) -> (a -> c)
 tr p q =
   |~ a
   ~> b ... (p)
   ~> c ... (q)
+-}
