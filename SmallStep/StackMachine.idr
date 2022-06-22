@@ -17,6 +17,7 @@ import Syntax.PreorderReasoning
 import Syntax.WithProof
 import Data.Vect
 import Data.Singleton
+import Data.DPair
 
 %default total
 
@@ -40,27 +41,39 @@ eval (t1 + t2) = eval t1 + eval t2
 -- Natural semantics
 
 data Eval : (t : Tm) -> (n : Nat) -> Type where
-  EvVal  : Eval (Cst n) n
+  EvCst  : Eval (Cst n) n
   EvPlus : Eval t1 n1 -> Eval t2 n2 -> Eval (t1 + t2) (n1 + n2)
 
 corr_eval : (t : Tm) -> Eval t (eval t)
-corr_eval (Cst n) = EvVal
+corr_eval (Cst n) = EvCst
 corr_eval (t1 + t2) = EvPlus (corr_eval t1) (corr_eval t2)
 
 -- data Singleton : a -> Type where
 --      Val : (x : a) -> Singleton x
 
-eval' : (t : Tm) -> {auto e : Eval t n} -> Singleton n
-eval' (Cst n) {e = EvVal} = Val n
-eval' (t1 + t2) {e = EvPlus e1 e2} =
-  let Val n1 = eval' t1 {e = e1} in
-  let Val n2 = eval' t2 {e = e2} in
+{-
+eval_sg : (t : Tm) -> {auto e : Eval t n} -> Singleton n
+eval_sg (Cst n) {e = EvCst} = Val n
+eval_sg (t1 + t2) {e = EvPlus e1 e2} =
+  let Val n1 = eval_sg t1 {e = e1} in
+  let Val n2 = eval_sg t2 {e = e2} in
   Val (n1 + n2)
 
-test_eval' : eval' ((Cst 2) + (Cst 3 + Cst 4))
-  {e = EvPlus EvVal (EvPlus EvVal EvVal)} = Val(9)
+test_eval' : eval_sg ((Cst 2) + (Cst 3 + Cst 4))
+  {e = EvPlus EvCst (EvPlus EvCst EvCst)} = Val(9)
 test_eval' = Refl
+-}
 
+eval_sg : (t : Tm) -> (0 e : Eval t n) -> Singleton n
+eval_sg (Cst n) EvCst = Val n
+eval_sg (t1 + t2) (EvPlus e1 e2) with (eval_sg t1 e1, eval_sg t2 e2)
+  _ | (Val n1, Val n2) = Val (n1 + n2)
+
+eval_ss : (t : Tm) -> Subset Nat (Eval t)
+eval_ss (Cst n) = Element n EvCst
+eval_ss (t1 + t2) with (eval_ss t1, eval_ss t2)
+  eval_ss (t1 + t2) | (Element n1 e1, Element n2 e2) =
+    Element (n1 + n2) (EvPlus e1 e2)
 
 --
 -- Virtual machine
