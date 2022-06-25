@@ -51,19 +51,6 @@ corr_eval (t1 + t2) = EvPlus (corr_eval t1) (corr_eval t2)
 -- data Singleton : a -> Type where
 --      Val : (x : a) -> Singleton x
 
-{-
-eval_sg : (t : Tm) -> {auto e : Eval t n} -> Singleton n
-eval_sg (Cst n) {e = EvCst} = Val n
-eval_sg (t1 + t2) {e = EvPlus e1 e2} =
-  let Val n1 = eval_sg t1 {e = e1} in
-  let Val n2 = eval_sg t2 {e = e2} in
-  Val (n1 + n2)
-
-test_eval' : eval_sg ((Cst 2) + (Cst 3 + Cst 4))
-  {e = EvPlus EvCst (EvPlus EvCst EvCst)} = Val(9)
-test_eval' = Refl
--}
-
 eval_sg : (t : Tm) -> (0 e : Eval t n) -> Singleton n
 eval_sg (Cst n) EvCst = Val n
 eval_sg (t1 + t2) (EvPlus e1 e2) with (eval_sg t1 e1, eval_sg t2 e2)
@@ -72,7 +59,7 @@ eval_sg (t1 + t2) (EvPlus e1 e2) with (eval_sg t1 e1, eval_sg t2 e2)
 eval_ss : (t : Tm) -> Subset Nat (Eval t)
 eval_ss (Cst n) = Element n EvCst
 eval_ss (t1 + t2) with (eval_ss t1, eval_ss t2)
-  eval_ss (t1 + t2) | (Element n1 e1, Element n2 e2) =
+  _ | (Element n1 e1, Element n2 e2) =
     Element (n1 + n2) (EvPlus e1 e2)
 
 --

@@ -1,4 +1,4 @@
-module Intro.Termination
+module Intro.WellFounded
 
 import Data.Nat
 import Control.WellFounded
@@ -125,7 +125,7 @@ log2a Z = Z
 log2a (S Z) = Z
 log2a (S (S n)) = S (log2a (assert_smaller (S (S n)) (S (div2 n))))
 
-log2a_test : map Termination.log2a [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
+log2a_test : map WellFounded.log2a [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
 log2a_test = Refl
 
 --
@@ -134,7 +134,7 @@ log2a_test = Refl
 
 -- %hide log2
 
-log2s' : (n : Nat) -> (acc : SizeAccessible n) -> Nat
+log2s' : (n : Nat) -> (0 acc : SizeAccessible n) -> Nat
 log2s' Z acc = Z
 log2s' (S Z) acc = Z
 log2s' (S (S n)) (Access rec) =
@@ -197,5 +197,5 @@ all_log2b n = all_log2b' n (sizeAccessible n)
 log2b : Nat -> Nat
 log2b n = log2b' n (all_log2b n)
 
--- log2b_test : map Termination.log2b [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
+-- log2b_test : map WellFounded.log2b [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
 -- log2b_test = Refl
