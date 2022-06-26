@@ -38,8 +38,8 @@ partial
 foo1 : Bin -> Nat
 foo1 BN = Z
 foo1 (B0 BN) = Z
-foo1 (B0 (B1 x)) = S (foo1 (B0 x))
 foo1 (B0 (B0 x)) = S (foo1 (B0 x))
+foo1 (B0 (B1 x)) = S (foo1 (B0 x))
 foo1 (B1 x)      = S (foo1 x)
 
 -- This is OK neither in Agda nor in Idris.
@@ -50,9 +50,55 @@ partial
 foo2 : Bin -> Nat
 foo2 BN = Z
 foo2 (B0 BN) = Z
+foo2 (B0 (B0 x)) = S (foo2 (B0 x))
 foo2 (B0 (B1 x)) = S (foo2 (B0 x))
-foo2 (B0 (B0 x)) = S (foo2 (B1 x))
 foo2 (B1 x)      = S (foo2 x)
+
+Sized Bin where
+  size BN = Z
+  size (B0 x) = S (size x)
+  size (B1 x) = S (size x)
+
+foo3' : (x : Bin) -> (0 acc : SizeAccessible x) -> Nat
+foo3' BN acc = Z
+foo3' (B0 BN) acc = Z
+foo3' (B0 (B0 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) h))
+  where h : S (S (size x)) `LTE` S (S (size x))
+        h = LTESucc $ LTESucc $ reflexive
+foo3' (B0 (B1 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) h))
+  where h : S (S (size x)) `LTE` S (S (size x))
+        h = LTESucc $ LTESucc $ reflexive
+foo3' (B1 x) (Access rec) = S (foo3' x (rec x h))
+  where h : S (size x) `LTE` S (size x)
+        h = LTESucc $ reflexive
+
+foo3 : (x : Bin) -> Nat
+foo3 x = foo3' x (sizeAccessible x)
+
+-- But we can "ornament" Bin with its size.
+-- Then the termination checker sees the decreasing size and is happy.
+
+data SBin : (0 k : Nat) -> Type where
+  SBN  : SBin Z
+  SB0 : SBin k -> SBin (S k)
+  SB1 : SBin k -> SBin (S k)
+
+foo_s : SBin k -> Nat
+foo_s SBN = Z
+foo_s (SB0 SBN) = Z
+foo_s (SB0 (SB0 x)) = S (foo_s (SB0 x))
+foo_s (SB0 (SB1 x)) = S (foo_s (SB0 x))
+foo_s (SB1 x) = S (foo_s x)
+
+-- The same, but k has been made visible.
+-- (Note that k is not used for making decisions at run-time.)
+
+foo_s' : (0 k : Nat) -> SBin k -> Nat
+foo_s' Z SBN = Z
+foo_s' (S Z) (SB0 SBN) = Z
+foo_s' (S (S k')) (SB0 (SB0 x)) = S (foo_s' (S k') (SB0 x))
+foo_s' (S (S k')) (SB0 (SB1 x)) = S (foo_s' (S k') (SB0 x))
+foo_s' (S k') (SB1 x) = S (foo_s' k' x)
 
 -- Agda can find termination orders across mutually recursive functions.
 -- Agda can find lexicographic termination orders.
