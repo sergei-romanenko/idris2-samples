@@ -185,19 +185,21 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 -- `compile` from `ex_code` (unlike Coq).
 --
 
-{-
 corr_ex_code : (t : Tm) ->
   compile {i} t = fst (ex_code {i} t)
 corr_ex_code (Cst n) = Refl
-corr_ex_code {i} (t1 + t2) with (@@ ex_code {i=i} t1)
-  _ | ((c1 ** p1) ** eq1) with (@@ ex_code {i=1+i} t2)
-    _ | ((c2 ** p2) ** eq2) =
-      rewrite corr_ex_code {i=i} t1 in
-      rewrite corr_ex_code {i=1+i} t2 in
-      rewrite sym eq1 in
-      rewrite sym eq2 in
-      Refl
--}
+corr_ex_code {i} (t1 + t2) =
+  let
+    ((c1 ** p1) ** eq1) = @@ ex_code {i=i} t1
+    ((c2 ** p2) ** eq2) = @@ ex_code {i=1+i} t2
+    corr1 = corr_ex_code {i=i} t1
+    corr2 = corr_ex_code {i=1+i} t2
+  in
+  rewrite the (compile t1 = fst (ex_code t1)) corr1 in
+  rewrite the (compile t2 = fst (ex_code t2)) corr2 in
+  rewrite the (ex_code t1 = (c1 ** p1)) eq1 in
+  rewrite the (ex_code t2 = (c2 ** p2)) eq2 in
+  the (Seq (Seq c1 c2) Add = Seq (Seq c1 c2) Add) Refl
 
 --
 -- Compiling to a list of instructions

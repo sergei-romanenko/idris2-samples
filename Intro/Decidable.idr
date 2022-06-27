@@ -36,9 +36,9 @@ decEven : (n : Nat) -> Dec (Even n)
 decEven Z = Yes Ev0
 decEven (S Z) = No absurd -- No notEven1
 decEven (S (S n')) with (decEven n')
-  decEven (S (S n')) | (Yes even_n') =
+  _ | (Yes even_n') =
     Yes $ Ev2 even_n'
-  decEven (S (S n')) | (No not_even_n') =
+  _ | (No not_even_n') =
     No $ \even_n => not_even_n' (ev2Inv even_n)
 
 soundnessEvenY : (p : _) -> decEven n = Yes p -> Even n
@@ -111,7 +111,7 @@ data Parity : Nat -> Type where
 parity : (n : Nat) -> Parity n
 parity Z = PEven Z
 parity (S n') with (parity n')
-  parity (S (k + k)) | (PEven k) =
+  parity (S (k + k))     | (PEven k) =
     POdd k
   parity (S (S (k + k))) | (POdd k) =
     rewrite plusSuccRightSucc k k in
@@ -119,7 +119,7 @@ parity (S n') with (parity n')
 
 half : (n : Nat) -> Nat
 half n with (parity n)
-  half (k + k) | (PEven k) = k
+  half (k + k)     | (PEven k) = k
   half (S (k + k)) | (POdd k) = k
 
 --
