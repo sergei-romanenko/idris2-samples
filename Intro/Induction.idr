@@ -165,3 +165,61 @@ replicateToProperLength' (S n') =
     $ replicateToProperLength' n' in
   the (S n' = S n')
     $ Refl
+
+
+namespace RevRev
+
+  %hide Prelude.List.reverse
+  %hide Prelude.Types.List.(++)
+
+  (++) : (xs, ys : List a) -> List a
+  [] ++ ys = ys
+  (x :: xs) ++ ys = x :: xs ++ ys
+
+  reverse : List a -> List a
+  reverse [] = []
+  reverse (x :: xs) = reverse xs ++ [x]
+
+  test_reverse3 : reverse [1, 2, 3] = [3, 2, 1]
+  test_reverse3 = Refl
+
+  %hint
+  appendNilRightNeutral : (xs : List a) -> xs ++ [] = xs
+  appendNilRightNeutral [] = Calc $
+    |~ [] ~~ [] ...( Refl )
+  appendNilRightNeutral (x :: xs) = Calc $
+    |~ (x :: xs) ++ []
+    ~~ x :: xs
+      ...( cong (x ::) $ appendNilRightNeutral xs )
+
+  %hint
+  appendAssociative :
+    (xs, ys, zs : List a) -> xs ++ (ys ++ zs) = (xs ++ ys) ++ zs
+  appendAssociative [] ys zs = Refl
+  appendAssociative (x :: xs) ys zs = Calc $
+    |~ x :: (xs ++ (ys ++ zs))
+    ~~ x :: ((xs ++ ys) ++ zs)
+      ...( cong (x ::) (appendAssociative xs ys zs) )
+
+  %hint
+  reverseAppend : (xs : List a) -> (ys : List a) ->
+    reverse (xs ++ ys) = reverse ys ++ reverse xs
+  reverseAppend [] ys =
+    sym $ appendNilRightNeutral(reverse ys)
+  reverseAppend (x :: xs) ys = Calc $
+    |~ (reverse (xs ++ ys) ++ [x])
+    ~~ ((reverse ys ++ reverse xs) ++ [x])
+      ...( cong (++ [x]) $ reverseAppend xs ys )
+    ~~ (reverse ys ++ (reverse xs ++ [x]))
+      ...( sym $ appendAssociative (reverse ys) (reverse xs) [x] )
+
+  reverseReverse : (xs : List a) -> reverse (reverse xs) = xs
+  reverseReverse [] = Refl
+  reverseReverse (x :: xs) = Calc $
+    |~ reverse (reverse xs ++ [x])
+    ~~ (reverse [x] ++ reverse (reverse xs))
+      ... ( reverseAppend (reverse xs) [x] )
+    ~~ (x :: reverse (reverse xs))
+      ... ( Refl )
+    ~~ x :: xs
+       ... ( cong (x ::) (reverseReverse xs) )
