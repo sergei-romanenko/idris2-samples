@@ -156,16 +156,14 @@ correct_compile' (t1 + t2) s =
 --
 
 ex_code : (t : Tm) ->
-  (c : Code i (1 + i) ** (s : Stack i) -> exec c s = eval t :: s)
-ex_code (Cst n) =
-  (Push n ** \s => Calc $
-    |~ exec (Push n) s
-    ~~ n :: s             ...( Refl )
-    ~~ eval (Cst n) :: s  ...( Refl )
-  )
+  Subset (Code i (1 + i)) (\c => (s : Stack i) -> exec c s = eval t :: s)
+ex_code (Cst n) = Element (Push n) $ \s => Calc $
+  |~ exec (Push n) s
+  ~~ n :: s             ...( Refl )
+  ~~ eval (Cst n) :: s  ...( Refl )
 ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
-  _ | ((c1 ** p1), (c2 **  p2)) =
-    (Seq (Seq c1 c2) Add ** \s => Calc $
+  ex_code (t1 + t2) | (Element c1 p1, Element c2 p2) =
+    Element (Seq (Seq c1 c2) Add) $ \s => Calc $
       |~ exec (Seq (Seq c1 c2) Add) s
       ~~ exec Add (exec c2 (exec c1 s))
           ...( Refl )
@@ -177,7 +175,6 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
           ...( Refl )
       ~~ eval (t1 + t2) :: s
           ...( Refl )
-    )
 
 --
 -- `ex_code` produces the same code as `compile`.
@@ -186,19 +183,19 @@ ex_code (t1 + t2) with (ex_code {i=i} t1, ex_code {i=1+i} t2)
 --
 
 corr_ex_code : (t : Tm) ->
-  compile {i} t = fst (ex_code {i} t)
-corr_ex_code (Cst n) = Refl
+  compile {i} t = (ex_code {i} t).fst
+corr_ex_code {i} (Cst n) = Refl
 corr_ex_code {i} (t1 + t2) =
   let
-    ((c1 ** p1) ** eq1) = @@ ex_code {i=i} t1
-    ((c2 ** p2) ** eq2) = @@ ex_code {i=1+i} t2
+    (Element c1 p1 ** eq1) = @@ ex_code {i=i} t1
+    (Element c2 p2 ** eq2) = @@ ex_code {i=1+i} t2
     corr1 = corr_ex_code {i=i} t1
     corr2 = corr_ex_code {i=1+i} t2
   in
   rewrite the (compile t1 = fst (ex_code t1)) corr1 in
   rewrite the (compile t2 = fst (ex_code t2)) corr2 in
-  rewrite the (ex_code t1 = (c1 ** p1)) eq1 in
-  rewrite the (ex_code t2 = (c2 ** p2)) eq2 in
+  rewrite the (ex_code t1 = Element c1 p1) eq1 in
+  rewrite the (ex_code t2 = Element c2 p2) eq2 in
   the (Seq (Seq c1 c2) Add = Seq (Seq c1 c2) Add) Refl
 
 --

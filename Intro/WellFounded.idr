@@ -178,8 +178,6 @@ log2a_test = Refl
 -- Using the accessibility of all Nat's.
 --
 
--- %hide log2
-
 log2s' : (n : Nat) -> (0 acc : SizeAccessible n) -> Nat
 log2s' Z acc = Z
 log2s' (S Z) acc = Z
