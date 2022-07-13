@@ -25,6 +25,78 @@ add (S x') y = S (add x' y)
 --  * Application: if y < x then
 --       y a1 ... an < x
 
+-- Idris can find termination orders across mutually recursive functions.
+-- Idris can find lexicographic termination orders.
+
+-- There is a lexicographic order on parameters with respect
+-- to the dependency order:
+--   (x , y) << (x’, y’) ⇔ (x < x’ or (x ≤ x’ & y < y’))
+
+ack : Nat -> Nat -> Nat
+ack Z n = S Z
+ack (S m) Z = ack m (S Z)
+ack (S m) (S n) = ack m (ack (S m) n)
+
+--
+-- But in some cases all the above is not sufficient.
+--
+
+-- Division by 2, rounded downwards.
+
+div2 : Nat -> Nat
+div2 Z = Z
+div2 (S Z) = Z
+div2 (S (S n)) = S (div2 n)
+
+div2LTE : (n : Nat) -> div2 n `LTE` n
+div2LTE Z = LTEZero
+div2LTE (S Z) = LTEZero
+div2LTE (S (S n)) =
+  LTESucc (lteSuccRight (div2LTE n))
+
+log2a : Nat -> Nat
+log2a Z = Z
+log2a (S Z) = Z
+log2a (S (S n)) = S (log2a (assert_smaller (S (S n)) (S (div2 n))))
+
+log2a_test : map WellFounded.log2a [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
+log2a_test = Refl
+
+--
+-- Using the accessibility of all Nat's.
+--
+
+-- data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
+--   Access : (rec : (y : a) -> rel y x -> Accessible rel y) ->
+--           Accessible rel x
+
+
+wellFoundedNatLT : (n : Nat) -> Accessible LT n
+wellFoundedNatLT n = Access $ acc n
+  where
+    acc : (x : Nat) -> (y : Nat) -> y `LT`  x -> Accessible LT y
+    acc (S x') y (LTESucc yLTx) =
+      Access $ \z, zLTy => acc x' z $ transitive zLTy yLTx
+
+log2w' : (n : Nat) -> (0 acc : Accessible LT n) -> Nat
+log2w' Z acc = Z
+log2w' (S Z) acc = Z
+log2w' (S (S n)) (Access rec) =
+  S (log2w' (S (div2 n)) (rec (S (div2 n)) lt))
+  where
+    lt : S (div2 n) `LT` S (S n)
+    lt = LTESucc (LTESucc (div2LTE n))
+
+log2w : (n : Nat) -> Nat
+log2w n = log2w' n (wellFoundedNatLT n)
+
+log2w_test : map WellFounded.log2w [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
+log2w_test = Refl
+
+--
+-- Sized
+--
+
 data Bin : Type where
   BN  : Bin
   B0 : Bin -> Bin
@@ -62,15 +134,9 @@ Sized Bin where
 foo3' : (x : Bin) -> (0 acc : SizeAccessible x) -> Nat
 foo3' BN acc = Z
 foo3' (B0 BN) acc = Z
-foo3' (B0 (B0 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) h))
-  where h : S (S (size x)) `LTE` S (S (size x))
-        h = LTESucc $ LTESucc $ reflexive
-foo3' (B0 (B1 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) h))
-  where h : S (S (size x)) `LTE` S (S (size x))
-        h = LTESucc $ LTESucc $ reflexive
-foo3' (B1 x) (Access rec) = S (foo3' x (rec x h))
-  where h : S (size x) `LTE` S (size x)
-        h = LTESucc $ reflexive
+foo3' (B0 (B0 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) reflexive))
+foo3' (B0 (B1 x)) (Access rec) = S (foo3' (B0 x) (rec (B0 x) reflexive))
+foo3' (B1 x) (Access rec) = S (foo3' x (rec x reflexive))
 
 foo3 : (x : Bin) -> Nat
 foo3 x = foo3' x (sizeAccessible x)
@@ -100,101 +166,6 @@ foo_s' (S (S k')) (SB0 (SB0 x)) = S (foo_s' (S k') (SB0 x))
 foo_s' (S (S k')) (SB0 (SB1 x)) = S (foo_s' (S k') (SB0 x))
 foo_s' (S k') (SB1 x) = S (foo_s' k' x)
 
--- Agda can find termination orders across mutually recursive functions.
--- Agda can find lexicographic termination orders.
-
--- There is a lexicographic order on parameters with respect
--- to the dependency order:
---   (x , y) << (x’, y’) ⇔ (x < x’ or (x ≤ x’ & y < y’))
-
-ack : Nat -> Nat -> Nat
-ack Z n = S Z
-ack (S m) Z = ack m (S Z)
-ack (S m) (S n) = ack m (ack (S m) n)
-
--- And what about the application rule:
---  y < x ⇒ y a1 ... an < x ?
-
---
--- Transfinite addition of ordinal numbers
---
-
-data OrdNat : Type where
-  OZ : OrdNat
-  OS  : (n : OrdNat) -> OrdNat
-  Lim  : (f : Nat -> OrdNat) -> OrdNat
-
-addOrd : (n, m : OrdNat) -> OrdNat
-addOrd OZ m = m
-addOrd (OS n) m = OS (addOrd n m)
-addOrd (Lim f) m = Lim (\u => addOrd (f u) m)
-
-Lim0 : OrdNat
-Lim0 = Lim (\u => OZ)
-
-lim00 : addOrd Lim0 OZ = Lim (\_ => OZ)
-lim00 = Refl
-
-lim0m : (m : OrdNat) -> addOrd Lim0 m = Lim (\_ => m)
-lim0m m = Refl
-
-NatToOrdNat : (n : Nat) -> OrdNat
-NatToOrdNat Z = OZ
-NatToOrdNat (S n) = OS (NatToOrdNat n)
-
-Branch : OrdNat
-Branch = Lim (\u => NatToOrdNat u)
-
-branch_branch : addOrd Branch Branch =
-  Lim (\u => addOrd (NatToOrdNat u) (Lim NatToOrdNat))
-branch_branch = Refl
-
---
--- But in some cases all the above is not sufficient.
---
-
--- Division by 2, rounded downwards.
-
-div2 : Nat -> Nat
-div2 Z = Z
-div2 (S Z) = Z
-div2 (S (S n)) = S (div2 n)
-
-div2LTE : (n : Nat) -> div2 n `LTE` n
-div2LTE Z = LTEZero
-div2LTE (S Z) = LTEZero
-div2LTE (S (S n)) =
-  LTESucc (lteSuccRight (div2LTE n))
-
-log2a : Nat -> Nat
-log2a Z = Z
-log2a (S Z) = Z
-log2a (S (S n)) = S (log2a (assert_smaller (S (S n)) (S (div2 n))))
-
-log2a_test : map WellFounded.log2a [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
-log2a_test = Refl
-
---
--- Using the accessibility of all Nat's.
---
-
-log2s' : (n : Nat) -> (0 acc : SizeAccessible n) -> Nat
-log2s' Z acc = Z
-log2s' (S Z) acc = Z
-log2s' (S (S n)) (Access rec) =
-  S (log2s' (S (div2 n)) (rec (S (div2 n)) lt))
-  where
-        lt : S (div2 n) `LT` S (S n)
-        lt = LTESucc (LTESucc (div2LTE n))
-
-log2s : (n : Nat) -> Nat
-log2s n = log2s' n (sizeAccessible n)
-
--- log2s_test2 : log2s (S (S (S (S Z)))) = S (S Z)
--- log2s_test2 = Refl
-
--- log2s_test : map Termination.log2s [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
--- log2s_test = Refl
 
 -- We can separate the computational part from the proofs
 -- related to ensuring the termination. See the papers:
@@ -212,7 +183,7 @@ data Log2b : Nat -> Type where
   L1 : Log2b (S Z)
   L2 : Log2b (S (div2 n)) -> Log2b (S (S n))
 
-log2b' : (n : Nat) -> (acc : Log2b n) -> Nat
+log2b' : (n : Nat) -> (0 acc : Log2b n) -> Nat
 log2b' Z L0 = Z
 log2b' (S Z) L1 = Z
 log2b' (S (S n)) (L2 acc) =
@@ -243,3 +214,40 @@ log2b n = log2b' n (all_log2b n)
 
 -- log2b_test : map WellFounded.log2b [0, 1, 2, 3, 4] = [0, 0, 1, 1, 2]
 -- log2b_test = Refl
+
+--
+-- Transfinite addition of ordinal numbers
+--
+
+data OrdNat : Type where
+  OZ : OrdNat
+  OS  : (n : OrdNat) -> OrdNat
+  Lim  : (f : Nat -> OrdNat) -> OrdNat
+
+-- Here we use the application rule:
+--  y < x ⇒ y a1 ... an < x
+
+addOrd : (n, m : OrdNat) -> OrdNat
+addOrd OZ m = m
+addOrd (OS n) m = OS (addOrd n m)
+addOrd (Lim f) m = Lim (\u => addOrd (f u) m)
+
+Lim0 : OrdNat
+Lim0 = Lim (\u => OZ)
+
+lim00 : addOrd Lim0 OZ = Lim (\_ => OZ)
+lim00 = Refl
+
+lim0m : (m : OrdNat) -> addOrd Lim0 m = Lim (\_ => m)
+lim0m m = Refl
+
+NatToOrdNat : (n : Nat) -> OrdNat
+NatToOrdNat Z = OZ
+NatToOrdNat (S n) = OS (NatToOrdNat n)
+
+Branch : OrdNat
+Branch = Lim (\u => NatToOrdNat u)
+
+branch_branch : addOrd Branch Branch =
+  Lim (\u => addOrd (NatToOrdNat u) (Lim NatToOrdNat))
+branch_branch = Refl
