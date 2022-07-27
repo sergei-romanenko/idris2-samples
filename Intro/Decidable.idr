@@ -143,12 +143,9 @@ namespace AddVect2
               else Just (zipWith (+) xs ys)
   -}
   addVec {m} xs {n} ys with (decEq m n)
-    _ | (No ne) = Nothing
-    _ | (Yes m_eq_n) =
-      let ys' : Vect m Nat
-          ys' = rewrite m_eq_n in ys
-      in
-      Just (zipWith (+) xs ys')
+    _ | No ne = Nothing
+    _ | Yes m_eq_n =
+      Just (zipWith (+) xs (rewrite m_eq_n in ys))
 
 namespace AddVec3
 
@@ -156,8 +153,8 @@ namespace AddVec3
     {m : _} -> (xs : Vect m Nat) ->
     {n : _} -> (ys : Vect n Nat) -> Maybe (Vect m Nat)
   addVec {m} xs {n} ys with (decEq m n)
-    addVec xs ys | (No ne) = Nothing
-    addVec xs ys | (Yes m_eq_n) =
+    addVec xs ys | No ne = Nothing
+    addVec xs ys | Yes m_eq_n =
       let ys' : Vect m Nat
           ys' = replace {p = \k => Vect k Nat} (sym m_eq_n) ys
       in

@@ -135,15 +135,15 @@ dbl_injective' (S m') (S n') h =
 
 dbl_injective'' : (m, n : Nat) -> dbl m = dbl n -> m = n
 dbl_injective'' Z Z =
-  |~ (dbl Z = dbl Z) ~> (Z = Z) ...( id )
+  |~~ (dbl Z = dbl Z) ~~> (Z = Z) ...( id )
 dbl_injective'' Z (S n') = absurd
 dbl_injective'' (S m') 0 = absurd
 dbl_injective'' (S m') (S n') =
-  |~ (dbl (S m') = dbl (S n'))
-  ~> (S (S (dbl m')) = S (S (dbl n')))  ...( id )
-  ~> (dbl m' = dbl n')                  ...( cong (pred . pred) )
-  ~> (m' = n')                          ...( dbl_injective'' m' n' )
-  ~> (S m' = S n')                      ...( cong S )
+  |~~ (dbl (S m') = dbl (S n'))
+  ~~> (S (S (dbl m')) = S (S (dbl n')))  ...( id )
+  ~~> (dbl m' = dbl n')                  ...( cong (pred . pred) )
+  ~~> (m' = n')                          ...( dbl_injective'' m' n' )
+  ~~> (S m' = S n')                      ...( cong S )
 
 -- A subtle point: without `{x}` we get the error
 -- "Rewriting by length (replicate n' (Nat x n')) = n' did not change type"!
