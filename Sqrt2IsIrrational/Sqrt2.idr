@@ -33,43 +33,35 @@ module Sqrt2IsIrrational.Sqrt2
 -- We can repeat the above step several times, but, eventually, we come
 -- to p = 0. Which contradicts the original assumption that p /= 0.
 
-
--- module Corbineau.Sqrt2 where
-
--- open import Data.Nat
---   using (Nat; Z; suc; _+_; _*_; ⌊_/2⌋; _<′_; ≤′-refl; _≟_)
--- open import Data.Nat.Properties.Simple
---   using (+-suc; +-assoc; *-comm; distribʳ-*-+; +-right-identity)
--- open import Data.Nat.Properties
---   using (s≤′s; ⌊n/2⌋≤′n)
--- open import Data.Sum as Sum
---   using (_⊎_; inj₁; inj₂; [_,_]′)
--- open import Data.Empty
---   using (⊥; ⊥-elim)
-
--- open import Function
---   using (_∘_; _$_)
--- import Function.Related as Related
-
--- open import Relation.Nullary
---   using (Dec; yes; no; ¬_)
--- open import Relation.Binary.PropositionalEquality as P
---   using (_≡_; _≢_; refl; cong; cong₂; subst; sym; module =-Reasoning)
-
--- open import Induction.WellFounded
---   using (Acc; acc)
--- open import Induction.Nat
---   using (<′-well-founded)
-
 import Data.Nat
 import Control.WellFounded
 import Syntax.PreorderReasoning
 import Decidable.Equality
 
 %default total
+-- ==========
 
-double : Nat -> Nat
-double n = n + n
+-- Implication reasoning
+
+prefix 1  |~~
+infixl 0  ~~>
+infix  1  ...
+
+-- Implication is a preorder relation...
+
+(|~~) : (0 a : Type) -> (a -> a)
+(|~~) a = id
+
+(~~>) : (p : a -> b) -> (q : b -> c) -> (a -> c)
+(~~>) p q = q . p
+
+(...) : (0 b : Type) -> (a -> b) -> (a -> b)
+(...) b xy = xy
+
+-- ==========
+
+dbl : Nat -> Nat
+dbl n = n + n
 
 sq : Nat -> Nat
 sq n = n * n
@@ -80,47 +72,47 @@ div2 (S Z) = Z
 div2 (S (S n)) = S (div2 n)
 
 %hint
-double_S : (n : Nat) -> double (S n) = S (S (double n))
-double_S n = Calc $
-  |~ double (S n)
+dbl_S : (n : Nat) -> dbl (S n) = S (S (dbl n))
+dbl_S n = Calc $
+  |~ dbl (S n)
   ~~ S (n + S n)      ... Refl
   ~~ S (S (n + n))    ... (cong S $ sym $ plusSuccRightSucc n n)
-  ~~ S (S (double n)) ... Refl
+  ~~ S (S (dbl n)) ... Refl
 
 %hint
-div2_double : (n : Nat) -> div2 (double n) = n
-div2_double Z = Refl
-div2_double (S n) = Calc $
-  |~ div2(double (S n))
-  ~~ div2 (S (S (double n))) ... (cong div2 (double_S n))
-  ~~ S (div2 (double n))     ... Refl
-  ~~ S n                     ... (cong S (div2_double n))
+div2_dbl : (n : Nat) -> div2 (dbl n) = n
+div2_dbl Z = Refl
+div2_dbl (S n) = Calc $
+  |~ div2(dbl (S n))
+  ~~ div2 (S (S (dbl n))) ... (cong div2 (dbl_S n))
+  ~~ S (div2 (dbl n))     ... Refl
+  ~~ S n                     ... (cong S (div2_dbl n))
 
 %hint
-double_inj : double m = double n -> m = n
-double_inj eq_2m_2n = Calc $
+dbl_inj : dbl m = dbl n -> m = n
+dbl_inj eq_2m_2n = Calc $
   |~ m
-  ~~ div2 (double m) ... (sym $ div2_double m)
-  ~~ div2 (double n) ... (cong div2 eq_2m_2n)
-  ~~ n               ... (div2_double n)
+  ~~ div2 (dbl m) ... (sym $ div2_dbl m)
+  ~~ div2 (dbl n) ... (cong div2 eq_2m_2n)
+  ~~ n               ... (div2_dbl n)
 
 %hint
-double_mult_l : double (m * n) = m * (double n)
-double_mult_l = Calc $
-  |~ double (m * n)
-  ~~ double (n * m)    ... (cong double $ multCommutative m n)
+dbl_mult_l : dbl (m * n) = m * (dbl n)
+dbl_mult_l = Calc $
+  |~ dbl (m * n)
+  ~~ dbl (n * m)    ... (cong dbl $ multCommutative m n)
   ~~ n * m + n * m     ... Refl
   ~~ (n + n) * m       ... (sym $ multDistributesOverPlusLeft n n m)
   ~~ m * (n + n)       ... (multCommutative (n + n) m)
-  ~~ m * (double n)    ... Refl
+  ~~ m * (dbl n)    ... Refl
 
 %hint
-double_mult_r : double (m * n) = (double m) * n
-double_mult_r = Calc $
-  |~ double (m * n)
-  ~~ double (n * m)    ... (cong double $ multCommutative m n)
-  ~~ n * (double m)    ... (double_mult_l)
-  ~~ (double m) * n    ... (multCommutative n (double m))
+dbl_mult_r : dbl (m * n) = (dbl m) * n
+dbl_mult_r = Calc $
+  |~ dbl (m * n)
+  ~~ dbl (n * m)    ... (cong dbl $ multCommutative m n)
+  ~~ n * (dbl m)    ... (dbl_mult_l)
+  ~~ (dbl m) * n    ... (multCommutative n (dbl m))
 
 mutual
 
@@ -134,35 +126,35 @@ mutual
 Uninhabited (Odd Z) where
   uninhabited (Odd1 _) impossible
 
-either_even_odd : (n : Nat) -> Either (Even n) (Odd n)
+either_even_odd : (n : Nat) -> Even n `Either` Odd n
 either_even_odd Z = Left Even0
 either_even_odd (S n) with (either_even_odd n)
   _ | (Left even_n) = Right (Odd1 even_n)
   _ | (Right odd_n) = Left (Even1 odd_n)
 
-even_double : (n : Nat) -> Even (double n)
-even_double Z = Even0
-even_double (S Z) = Even1 (Odd1 Even0)
-even_double (S (S n)) =
-  the (Even (double (S (S n)))) $
-    rewrite double_S (S n) in
-  the (Even (S (S (double (S n))))) $
+even_dbl : (n : Nat) -> Even (dbl n)
+even_dbl Z = Even0
+even_dbl (S Z) = Even1 (Odd1 Even0)
+even_dbl (S (S n)) =
+  the (Even (dbl (S (S n)))) $
+    rewrite dbl_S (S n) in
+  the (Even (S (S (dbl (S n))))) $
     (Even1 . Odd1) $
-  the (Even (double (S n))) $
-    rewrite double_S n in
-  the (Even (S (S (double n)))) $
+  the (Even (dbl (S n))) $
+    rewrite dbl_S n in
+  the (Even (S (S (dbl n)))) $
     (Even1 . Odd1) $
-  the (Even (double n)) $
-    even_double n
+  the (Even (dbl n)) $
+    even_dbl n
 
 %hint
-even_double_div2 : Even n -> double (div2 n) = n
-even_double_div2 Even0 = ?even_double_div2_rhs_0
-even_double_div2 (Even1 (Odd1 {n = n} even_n)) = Calc $
-  |~ double (div2 (S (S n)))
-  ~~ double (S (div2 n))     ... Refl
-  ~~ S (S (double (div2 n))) ... (double_S (div2 n))
-  ~~ S (S n)                 ... (cong (S . S) (even_double_div2 even_n))
+even_dbl_div2 : Even n -> dbl (div2 n) = n
+even_dbl_div2 Even0 = ?even_dbl_div2_rhs_0
+even_dbl_div2 (Even1 (Odd1 {n = n} even_n)) = Calc $
+  |~ dbl (div2 (S (S n)))
+  ~~ dbl (S (div2 n))     ... Refl
+  ~~ S (S (dbl (div2 n))) ... (dbl_S (div2 n))
+  ~~ S (S n)                 ... (cong (S . S) (even_dbl_div2 even_n))
 
 
 %hint
@@ -186,7 +178,7 @@ odd_even_mult (Odd1 (Even1 {n=m} odd_m)) even_nn_mn =
   the (Even n) $
     odd_even_mult odd_m $
   the (Even (m * n)) $
-    even_even_plus (double n) (even_double n) $
+    even_even_plus (dbl n) (even_dbl n) $
   the (Even ((n + n) + m * n)) $
     rewrite sym $ plusAssociative n n (m * n) in
   the (Even (n + (n + m * n))) $
@@ -201,32 +193,15 @@ even_sq even_nn with (either_even_odd n)
 
 
 %hint
-odd_double_div2 : {n : Nat} -> Odd n -> S (double (div2 n)) = n
-odd_double_div2 (Odd1 Even0) = Refl
-odd_double_div2 {n = S (S n)} (Odd1 (Even1 odd_n)) = Calc $
-  |~ S (double (div2 (S (S n))))
-  ~~ S (double (S (div2 n)))     ... Refl
-  ~~ S (S (S (double (div2 n)))) ... (cong S (double_S (div2 n)))
-  ~~ S (S n)                     ... (cong (S . S) (odd_double_div2 odd_n))
-
-
-%hint
 even_dd_sq_div2 : {n : Nat} -> Even n ->
-  double (double (sq (div2 n))) = sq n
+  dbl (dbl (sq (div2 n))) = sq n
 even_dd_sq_div2 even_n = Calc $
-  |~ double (double (sq (div2 n)))
-  ~~ double (double (div2 n * div2 n)) ... Refl
-  ~~ double (div2 n * double (div2 n)) ... (cong double double_mult_l)
-  ~~ double (div2 n) * double (div2 n) ... (double_mult_r)
+  |~ dbl (dbl (sq (div2 n)))
+  ~~ dbl (dbl (div2 n * div2 n)) ... Refl
+  ~~ dbl (div2 n * dbl (div2 n)) ... (cong dbl dbl_mult_l)
+  ~~ dbl (div2 n) * dbl (div2 n) ... (dbl_mult_r)
   ~~ sq n 
-    ... (cong2 (*) (even_double_div2 even_n) (even_double_div2 even_n))
-
-
-%hint
-sq__0 :  {n : Nat} -> sq n = 0 -> n = 0
-sq__0 {n = 0} Refl = Refl
-sq__0 {n = (S n')} s__0 = absurd s__0
-
+    ... (cong2 (*) (even_dbl_div2 even_n) (even_dbl_div2 even_n))
 
 %hint
 div2_lte : (n : Nat) -> div2 n `LTE`  n
@@ -242,113 +217,97 @@ div2_lt (S (S n')) SIsNonZero =
    LTESucc $ LTESucc $ div2_lte n'
 
 %hint
-not_eq_0__nonzero : (k : Nat) -> Not (k = 0) -> NonZero k
-not_eq_0__nonzero Z neq_0_0 = void (neq_0_0 Refl)
-not_eq_0__nonzero (S k) neq_sk_0 = SIsNonZero
+nz_n_imp_nz_m : (m, n : Nat) -> NonZero n -> sq m = dbl (sq n) -> NonZero m
+nz_n_imp_nz_m 0 (S n') SIsNonZero z__s = absurd z__s
+nz_n_imp_nz_m (S k) (S n') SIsNonZero sq_m__d_sq_n = SIsNonZero
+
 
 -- ==========
 -- The most sophisticated part:
---   sq m = double (sq p) -> p = 0.
+--   NonZero m -> sq m = dbl (sq p) -> Void.
 -- The proof is by reducing the problem to a "smaller" one:
---   sq (m/2) = sq (double(p/2)) -> p/2 = 0
+--   NonZero (m/2) -> sq (m/2) = dbl (sq (p/2)) -> Void
 -- ==========
 
-covering
-descent : (m, p : Nat) -> sq m = double (sq p) -> Accessible LT m -> p = 0
-descent m p h (Access rec) with (decEq m Z)
-  _ | Yes eq_m_0 =
-    the (p = 0) $
-      sq__0 $
-    the (sq p = 0) $
-      double_inj $
-    the (double (sq p) = double 0) $
-      id $
-    the (double (sq p) = sq 0) $
-      sym $
-    the (sq 0 = double (sq p)) $
-      replace {p = \t => sq t = double (sq p)} (eq_m_0) $
-    the (sq m = double (sq p)) $
-      h
 
-  _ | No neq_m_0 =
-    p__0
-    where
-      N : Nat
-      N = div2 m
-      Q : Nat
-      Q = div2 p
+-- descent_step
 
-      even_m : Even m
-      even_m =
-        the (Even m) $
-          even_sq $
-        the (Even (sq m)) $
-          replace {p = Even} (sym h) $
-        the (Even (double (sq p))) $
-          even_double (sq p)
+descent_step : (m, p :Nat) -> sq m = dbl (sq p) ->
+  sq (div2 m) = dbl (sq (div2 p))
+descent_step m p sq_m__d_sq_p =
+  sq_n__d_sq_q
+  where
 
-      dd_sq_n__sq_m : double (double (sq N)) = sq m
-      dd_sq_n__sq_m = even_dd_sq_div2 even_m
+  even_m : Even m
+  even_m =
+    the (Even m) $
+      even_sq $
+    the (Even (sq m)) $
+      rewrite sq_m__d_sq_p in
+    the (Even (dbl (sq p))) $
+      even_dbl (sq p)
 
-      dd_sq_n__d_sq_p : double (double (sq N)) = double (sq p)
-      dd_sq_n__d_sq_p = Calc $
-        |~ double (double (sq N))
-        ~~ sq m          ... ( dd_sq_n__sq_m )
-        ~~ double (sq p) ... ( h )
+  dd_sq_n__sq_m : dbl (dbl (sq (div2 m))) = sq m
+  dd_sq_n__sq_m = even_dd_sq_div2 even_m
 
-      d_sq_n__sq_p : double (sq N) = sq p
-      d_sq_n__sq_p = double_inj dd_sq_n__d_sq_p
+  dd_sq_n__d_sq_p : dbl (dbl (sq (div2 m))) = dbl (sq p)
+  dd_sq_n__d_sq_p = Calc $
+    |~ dbl (dbl (sq (div2 m)))
+    ~~ sq m          ... (dd_sq_n__sq_m)
+    ~~ dbl (sq p) ... (sq_m__d_sq_p)
 
-      even_p : Even p
-      even_p =
-        the (Even p) $
-          even_sq $
-        the (Even (sq p)) $
-          replace {p = Even} d_sq_n__sq_p $
-        the (Even (double (sq N))) $
-          even_double (sq N)
+  d_sq_n__sq_p : dbl (sq (div2 m)) = sq p
+  d_sq_n__sq_p = dbl_inj dd_sq_n__d_sq_p
 
-      dd_sq_n__ddd_sq_q :
-        double (double (sq N)) = double (double (double (sq Q)))
-      dd_sq_n__ddd_sq_q = Calc $
-        |~ double (double (sq N))
-        ~~ double (sq p)
-          ... ( dd_sq_n__d_sq_p )
-        ~~ double (double (double (sq Q)))
-          ... ( cong double (sym $ even_dd_sq_div2 even_p) )
+  even_p : Even p
+  even_p =
+    the (Even p) $
+      even_sq $
+    the (Even (sq p)) $
+      replace {p = Even} d_sq_n__sq_p $
+    the (Even (dbl (sq (div2 m)))) $
+      even_dbl (sq (div2 m))
 
-      sq_n__d_sq_q : sq N = double (sq Q)
-      sq_n__d_sq_q = double_inj (double_inj dd_sq_n__ddd_sq_q)
+  dd_sq_n__ddd_sq_q :
+    dbl (dbl (sq (div2 m))) = dbl (dbl (dbl (sq (div2 p))))
+  dd_sq_n__ddd_sq_q = Calc $
+    |~ dbl (dbl (sq (div2 m)))
+    ~~ dbl (sq p)
+      ... ( dd_sq_n__d_sq_p )
+    ~~ dbl (dbl (dbl (sq (div2 p))))
+      ... ( cong dbl (sym $ even_dd_sq_div2 even_p) )
 
-      nonZero_m : NonZero m
-      nonZero_m = not_eq_0__nonzero m neq_m_0
+  sq_n__d_sq_q : sq (div2 m) = dbl (sq (div2 p))
+  sq_n__d_sq_q = dbl_inj (dbl_inj dd_sq_n__ddd_sq_q)
 
-      q__0 : Q = 0
-      q__0 = descent N Q sq_n__d_sq_q (rec (div2 m) (div2_lt m nonZero_m))
 
-      p__0 : p = 0
-      p__0 = Calc $
-        |~ p
-        ~~ double Q  ... (sym $ even_double_div2 even_p)
-        ~~ double 0  ... (cong double q__0)
-        ~~ 0         ... Refl
+descent : (m, p : Nat) ->
+  (nz_m : NonZero m) ->
+  (h : sq m = dbl (sq p)) ->
+  Accessible LT m -> Void
+descent 0 _ _ SIsNonZero _ (Access _) impossible
+descent (S 0) 0 SIsNonZero s__z (Access rec) =
+  uninhabited s__z
+descent (S 0) (S k) SIsNonZero h (Access rec) =
+  let
+    sz__ss : (S Z = S (S ((k + k * S k) + (k + k * S k))))
+    sz__ss := replace {p = \t => S Z = S t}
+               (sym $ plusSuccRightSucc (k + k * S k) (k + k * S k)) h
+  in uninhabited sz__ss
+descent (S (S k)) p nz_m h (Access rec) =
+  descent (S (div2 k)) (div2 p)
+    SIsNonZero (descent_step (S (S k)) p h)
+    (rec (S (div2 k)) (div2_lt (S (S k)) nz_m))
 
-      q__0_imp_p_0 : q = 0 -> p = 0
-      q__0_imp_p_0 q__0 = Calc $
-        |~ p
-        ~~ double Q  ... (sym $ even_double_div2 even_p)
-        ~~ double 0  ... (cong double q__0)
-        ~~ 0         ... Refl
 
 -- ==========
 --  There is no m and n such that
---    n ≢ 0 and msq = mult2nsq
+--    NotZero n and sq m = dbl (sq n)
 --  Hence, sqrt 2 is irrational.
 -- ==========
 
-covering
-irrational_sqrt2 : (m, n : Nat) -> NonZero n -> Not (sq m = double (sq n))
-irrational_sqrt2 m (S n') SIsNonZero sq_m__d_sq_n = absurd sn__0
-  where
-    sn__0 : S n' = 0
-    sn__0 = descent m (S n') sq_m__d_sq_n (sizeAccessible m)
+irrational_sqrt2 : (m, n : Nat) -> NonZero n -> Not (sq m = dbl (sq n))
+irrational_sqrt2 m (S n') SIsNonZero sq_m__d_sq_n =
+  descent m (S n')
+      (nz_n_imp_nz_m m (S n') SIsNonZero sq_m__d_sq_n)
+      sq_m__d_sq_n (sizeAccessible m)
