@@ -73,7 +73,7 @@ namespace S_Injective
   s_inj Refl = Refl
 
   s_inj' : S m = S n -> m = n
-  s_inj' = \case Refl => Refl
+  s_inj' = \Refl => Refl
 
   s_inj'' : {m, n : Nat} -> S m = S n -> m = n
   s_inj'' = injective -- defined in Data.Nat
@@ -116,6 +116,8 @@ namespace Plus_n_Z_2
     the (0 + 0 = 0) $
       Refl
   plus_rz (S k) =
+    the (S k + Z = S k) $
+      id $
     the (S (k + Z) = S k) $
       cong S $
     the (k + 0 = k) $
@@ -124,7 +126,7 @@ namespace Plus_n_Z_2
 namespace Plus_n_Z_3
 
   plus_rz : (n : Nat) -> n + 0 = n
-  plus_rz Z = Calc $
+  plus_rz 0 = Calc $
     |~ 0 + 0
     ~~ 0     ... Refl
   plus_rz (S k) = Calc $
@@ -140,13 +142,13 @@ namespace NEQ_n_Sn_1
   np0 : P Z -> Void
   np0 z__sz = absurd z__sz
 
-  step : (n : Nat) -> P (S n) -> P n
-  step n =
+  down : (n : Nat) -> P (S n) -> P n
+  down n =
     |~~ (S n = S (S n))
     ~~> (n = S n)       ... ( injective )
   
   neq_n_Sn : (n : Nat) -> P n -> Void
-  neq_n_Sn = descNat np0 step
+  neq_n_Sn = descNat np0 down
 
 namespace NEQ_n_Sn_2
 
@@ -198,9 +200,8 @@ even_2 = Even1 (Odd1 Even0)
 
 -- Inversion.
 
-%hint
-not_odd_0 : Odd Z -> Void
-not_odd_0 (Odd1 _) impossible
+Uninhabited (Odd Z) where
+  uninhabited (Odd1 _) impossible
 
 %hint
 even_S : {n : Nat} -> Even (S n) -> Odd n
@@ -234,24 +235,21 @@ namespace Even_dbl_2
 
   even_dbl : (n : Nat) -> Even (n + n)
   even_dbl 0 = Even0
-  even_dbl (S k) = step $ even_dbl k
-    where
-    step : Even (k + k) -> Even (S k + S k)
-    step =
-      |~~ Even (k + k)
-      ~~> Even (S (S (k + k))) ... (Even1 . Odd1)
-      ~~> Even (S (k + S k))
-        ... (\h => rewrite sym $ plusSuccRightSucc k k in h)
-        -- ... (\h => replace {p = Even . S } (plusSuccRightSucc k k) h)
-      ~~> Even (S k + S k)     ... id
-
+  even_dbl (S k) = (
+    |~~ Even (k + k)
+    ~~> Even (S (S (k + k))) ... (Even1 . Odd1)
+    ~~> Even (S (k + S k))
+      ... (\h => rewrite sym $ plusSuccRightSucc k k in h)
+      -- ... (\h => replace {p = Even . S } (plusSuccRightSucc k k) h)
+    ~~> Even (S k + S k)     ... id
+    ) $ even_dbl k
 
 namespace Odd_dbl_1
 
   -- "Infinite descent" in style of Fermat.
 
   not_odd_dbl : (n : Nat) -> Odd (n + n) -> Void
-  not_odd_dbl 0 odd_0 = not_odd_0 odd_0
+  not_odd_dbl 0 odd_0 = absurd odd_0
   not_odd_dbl (S k) odd_dbl_sk = not_odd_dbl k $
     the (Odd (k + k)) $
       even_S $
@@ -269,32 +267,29 @@ namespace Odd_dbl_2
   -- "Infinite descent" in style of Fermat.
 
   not_odd_dbl : (n : Nat) -> Odd (n + n) -> Void
-  not_odd_dbl 0 odd_0 = not_odd_0 odd_0
-  not_odd_dbl (S k) odd_dbl_sk = not_odd_dbl k $ down odd_dbl_sk
-    where
-    down : Odd (S k + S k) -> Odd (k + k)
-    down =
-      |~~ Odd (S k + S k)
-      ~~> Odd (S (k + S k))   ... id
-      ~~> Odd (S (S (k + k))) ... (\h => rewrite plusSuccRightSucc k k in h)
-      ~~> Odd (k + k)         ... (even_S . odd_S)
-
+  not_odd_dbl 0 odd_0 = absurd odd_0
+  not_odd_dbl (S k) odd_dbl_sk = not_odd_dbl k $ (
+    |~~ Odd (S k + S k)
+    ~~> Odd (S (k + S k))   ... id
+    ~~> Odd (S (S (k + k))) ... (\h => rewrite plusSuccRightSucc k k in h)
+    ~~> Odd (k + k)         ... (even_S . odd_S)
+    ) $ odd_dbl_sk
 
 namespace EitherEvenOdd_1
 
-  even'odd : (n : Nat) -> (Even n) `Either` (Odd n)
+  even'odd : (n : Nat) -> Even n `Either` Odd n
   even'odd 0 = Left Even0
-  even'odd (S 0) = Right (Odd1 Even0)
+  even'odd (S 0) = Right $ Odd1 Even0
   even'odd (S (S k)) with (even'odd k)
-    _ | Left even_k = Left (Even1 (Odd1 even_k))
-    _ | Right odd_k = Right (Odd1 (Even1 odd_k))
+    _ | Left even_k = Left  $ Even1 (Odd1 even_k)
+    _ | Right odd_k = Right $ Odd1 (Even1 odd_k)
 
 
 namespace EitherEvenOdd_2
 
-  even'odd : (n : Nat) -> (Even n) `Either` (Odd n)
+  even'odd : (n : Nat) -> Even n `Either` Odd n
   even'odd 0 = Left Even0
-  even'odd (S 0) = Right (Odd1 Even0)
+  even'odd (S 0) = Right $ Odd1 Even0
   even'odd (S (S k)) =
     bimap (Even1 . Odd1) (Odd1 . Even1) $ even'odd k
 
@@ -316,7 +311,7 @@ namespace EitherEvenOdd_3
 
 namespace EitherEvenOdd_4
 
-  even'odd : (n : Nat) -> (Even n) `Either` (Odd n)
+  even'odd : (n : Nat) -> Even n `Either` Odd n
   even'odd 0 = Left Even0
   even'odd (S k) =
     mirror $ bimap Odd1 Even1 $ even'odd k
@@ -324,7 +319,7 @@ namespace EitherEvenOdd_4
 
 namespace EitherEvenOdd_5
 
-  even'odd : (n : Nat) -> (Even n) `Either` (Odd n)
+  even'odd : (n : Nat) -> Even n `Either` Odd n
   even'odd =
     indNat (Left Even0) (\m => mirror . bimap Odd1 Even1)
 
@@ -335,7 +330,7 @@ namespace Even_Odd_1
 
   not_even_odd : (m : Nat) -> (Even m, Odd m) -> Void
   not_even_odd 0 (even_0 , odd_0) =
-    not_odd_0 odd_0
+    absurd odd_0
   not_even_odd (S k) (even_sk , odd_sk) =
     not_even_odd k (odd_S odd_sk, even_S even_sk)
 
@@ -442,7 +437,7 @@ namespace BE'BO_1
 
   be'bo : (bn : BN n) -> BE n `Either` BO n
   be'bo Z = Left BE0
-  be'bo (S Z) = Right (BO1 BE0)
+  be'bo (S Z) = Right $ BO1 BE0
   be'bo (S (S bn)) =
     bimap (BE1 . BO1) (BO1 . BE1) $ be'bo bn
 
