@@ -11,14 +11,16 @@ module Sqrt2IsIrrational.Sqrt2
 --
 -- Informal proof
 --
--- Suppose that m*m = 2 * (p*p).
+-- Suppose that m*m = 2 * (p*p). Then
 --
--- 2 * (p*p) is even -> m*m is even -> m is even.
+--     2 * (p*p) is even -> m*m is even -> m is even.
 --
 -- Let m = 2 * n. Then
 --
--- (2*n)*(2*n) = 2 * (p*p) -> 4*(n*n) = 2*(p*p) -> 2*(n*n) = p*p ->
--- p*p = 2*(n*n).
+--     (2*n)*(2*n) = 2 * (p*p) ->
+--     4*(n*n) = 2*(p*p) ->
+--     2*(n*n) = p*p ->
+--     p*p = 2*(n*n).
 --
 -- Compare
 --      m * m = 2*(p * p) and
@@ -34,6 +36,7 @@ module Sqrt2IsIrrational.Sqrt2
 -- to p = 0. Which contradicts the original assumption that p /= 0.
 
 import Data.Nat
+import Data.Either
 import Control.WellFounded
 import Syntax.PreorderReasoning
 import Decidable.Equality
@@ -126,26 +129,28 @@ mutual
 Uninhabited (Odd Z) where
   uninhabited (Odd1 _) impossible
 
-either_even_odd : (n : Nat) -> Even n `Either` Odd n
-either_even_odd Z = Left Even0
-either_even_odd (S n) with (either_even_odd n)
-  _ | (Left even_n) = Right (Odd1 even_n)
-  _ | (Right odd_n) = Left (Even1 odd_n)
+even'odd : (n : Nat) -> Even n `Either` Odd n
+even'odd Z =
+  Left Even0
+even'odd (S n) =
+  mirror $ bimap Odd1 Even1 (even'odd n)
+{-
+even'odd (S n) with (even'odd n)
+  _ | Left even_n = Right $ Odd1 even_n
+  _ | Right odd_n = Left  $ Even1 odd_n
+-}
 
+%hint
 even_dbl : (n : Nat) -> Even (dbl n)
 even_dbl Z = Even0
 even_dbl (S Z) = Even1 (Odd1 Even0)
-even_dbl (S (S n)) =
-  the (Even (dbl (S (S n)))) $
-    rewrite dbl_S (S n) in
-  the (Even (S (S (dbl (S n))))) $
-    (Even1 . Odd1) $
-  the (Even (dbl (S n))) $
-    rewrite dbl_S n in
-  the (Even (S (S (dbl n)))) $
-    (Even1 . Odd1) $
-  the (Even (dbl n)) $
-    even_dbl n
+even_dbl (S (S n)) = (
+  |~~ Even (dbl n)
+  ~~> Even (S (S (dbl n)))     ... (Even1 . Odd1)
+  ~~> Even (dbl (S n))         ... (\h => rewrite dbl_S n in h)
+  ~~> Even (S (S (dbl (S n)))) ... (Even1 . Odd1)
+  ~~> Even (dbl (S (S n)))     ... (\h => rewrite dbl_S (S n) in h)
+  ) $ even_dbl n
 
 %hint
 even_dbl_div2 : Even n -> dbl (div2 n) = n
@@ -167,30 +172,23 @@ even_even_plus (S (S m)) (Even1 (Odd1 even_m)) (Even1 (Odd1 even_mn)) =
 
 %hint
 odd_even_mult : {m, n : Nat} -> Odd m -> Even (m * n) -> Even n
-odd_even_mult (Odd1 Even0) even_1n =
-  the (Even n) $
-    rewrite sym $ plusZeroRightNeutral n in
-  the (Even (n + 0)) $
-    id
-  the (Even (1 * n)) $
-    even_1n
-odd_even_mult (Odd1 (Even1 {n=m} odd_m)) even_nn_mn =
-  the (Even n) $
-    odd_even_mult odd_m $
-  the (Even (m * n)) $
-    even_even_plus (dbl n) (even_dbl n) $
-  the (Even ((n + n) + m * n)) $
-    rewrite sym $ plusAssociative n n (m * n) in
-  the (Even (n + (n + m * n))) $
-    even_nn_mn
+odd_even_mult (Odd1 Even0) =
+  |~~ Even (1 * n)
+  ~~> Even (n + 0) ... id
+  ~~> Even n       ... (\h => rewrite sym $ plusZeroRightNeutral n in h)
+odd_even_mult (Odd1 (Even1 {n=m} odd_m)) =
+  |~~ Even (n + (n + m * n))
+  ~~> Even ((n + n) + m * n)
+    ... (\h => rewrite sym $ plusAssociative n n (m * n) in h)
+  ~~> Even (m * n)  ... (even_even_plus (dbl n) (even_dbl n))
+  ~~> Even n        ... (odd_even_mult odd_m)
 
 
 %hint
 even_sq : {n : Nat} -> Even (sq n) -> Even n
-even_sq even_nn with (either_even_odd n)
+even_sq even_nn with (even'odd n)
   _ | Left even_n = even_n
   _ | Right odd_n = odd_even_mult odd_n even_nn
-
 
 %hint
 even_dd_sq_div2 : {n : Nat} -> Even n ->
@@ -228,7 +226,6 @@ nz_n_imp_nz_m (S k) (S n') SIsNonZero sq_m__d_sq_n = SIsNonZero
 -- The proof is by reducing the problem to a "smaller" one:
 --   NonZero (m/2) -> sq (m/2) = dbl (sq (p/2)) -> Void
 -- ==========
-
 
 -- descent_step
 
@@ -280,6 +277,7 @@ descent_step m p sq_m__d_sq_p =
   sq_n__d_sq_q : sq (div2 m) = dbl (sq (div2 p))
   sq_n__d_sq_q = dbl_inj (dbl_inj dd_sq_n__ddd_sq_q)
 
+-- descent
 
 descent : (m, p : Nat) ->
   (nz_m : NonZero m) ->
