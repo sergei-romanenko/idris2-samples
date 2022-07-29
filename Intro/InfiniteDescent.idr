@@ -24,6 +24,7 @@ import Control.WellFounded
 prefix 1  |~~
 infixl 0  ~~>
 infix  1  ...
+infixr 0 |>
 
 -- Implication is a preorder relation...
 
@@ -38,6 +39,10 @@ public export
 public export
 (...) : (0 b : Type) -> (a -> b) -> (a -> b)
 (...) b xy = xy
+
+public export
+(|>) : forall a, b. (x : a) -> (f : a -> b) -> b
+(|>) x f = f x
 
 -- ==========
 
@@ -235,14 +240,13 @@ namespace Even_dbl_2
 
   even_dbl : (n : Nat) -> Even (n + n)
   even_dbl 0 = Even0
-  even_dbl (S k) = (
+  even_dbl (S k) = even_dbl k |>
     |~~ Even (k + k)
     ~~> Even (S (S (k + k))) ... (Even1 . Odd1)
     ~~> Even (S (k + S k))
       ... (\h => rewrite sym $ plusSuccRightSucc k k in h)
       -- ... (\h => replace {p = Even . S } (plusSuccRightSucc k k) h)
     ~~> Even (S k + S k)     ... id
-    ) $ even_dbl k
 
 namespace Odd_dbl_1
 
@@ -268,12 +272,11 @@ namespace Odd_dbl_2
 
   not_odd_dbl : (n : Nat) -> Odd (n + n) -> Void
   not_odd_dbl 0 odd_0 = absurd odd_0
-  not_odd_dbl (S k) odd_dbl_sk = not_odd_dbl k $ (
+  not_odd_dbl (S k) odd_dbl_sk = not_odd_dbl k $ odd_dbl_sk |>
     |~~ Odd (S k + S k)
     ~~> Odd (S (k + S k))   ... id
     ~~> Odd (S (S (k + k))) ... (\h => rewrite plusSuccRightSucc k k in h)
     ~~> Odd (k + k)         ... (even_S . odd_S)
-    ) $ odd_dbl_sk
 
 namespace EitherEvenOdd_1
 

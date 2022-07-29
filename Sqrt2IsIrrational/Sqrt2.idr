@@ -42,6 +42,7 @@ import Syntax.PreorderReasoning
 import Decidable.Equality
 
 %default total
+
 -- ==========
 
 -- Implication reasoning
@@ -49,6 +50,7 @@ import Decidable.Equality
 prefix 1  |~~
 infixl 0  ~~>
 infix  1  ...
+infixr 0 |>
 
 -- Implication is a preorder relation...
 
@@ -60,6 +62,9 @@ infix  1  ...
 
 (...) : (0 b : Type) -> (a -> b) -> (a -> b)
 (...) b xy = xy
+
+(|>) : forall a, b. (x : a) -> (f : a -> b) -> b
+(|>) x f = f x
 
 -- ==========
 
@@ -78,8 +83,8 @@ div2 (S (S n)) = S (div2 n)
 dbl_S : (n : Nat) -> dbl (S n) = S (S (dbl n))
 dbl_S n = Calc $
   |~ dbl (S n)
-  ~~ S (n + S n)      ... Refl
-  ~~ S (S (n + n))    ... (cong S $ sym $ plusSuccRightSucc n n)
+  ~~ S (n + S n)   ... Refl
+  ~~ S (S (n + n)) ... (cong S $ sym $ plusSuccRightSucc n n)
   ~~ S (S (dbl n)) ... Refl
 
 %hint
@@ -89,7 +94,7 @@ div2_dbl (S n) = Calc $
   |~ div2(dbl (S n))
   ~~ div2 (S (S (dbl n))) ... (cong div2 (dbl_S n))
   ~~ S (div2 (dbl n))     ... Refl
-  ~~ S n                     ... (cong S (div2_dbl n))
+  ~~ S n                  ... (cong S (div2_dbl n))
 
 %hint
 dbl_inj : dbl m = dbl n -> m = n
@@ -97,7 +102,7 @@ dbl_inj eq_2m_2n = Calc $
   |~ m
   ~~ div2 (dbl m) ... (sym $ div2_dbl m)
   ~~ div2 (dbl n) ... (cong div2 eq_2m_2n)
-  ~~ n               ... (div2_dbl n)
+  ~~ n            ... (div2_dbl n)
 
 %hint
 dbl_mult_l : dbl (m * n) = m * (dbl n)
@@ -134,23 +139,17 @@ even'odd Z =
   Left Even0
 even'odd (S n) =
   mirror $ bimap Odd1 Even1 (even'odd n)
-{-
-even'odd (S n) with (even'odd n)
-  _ | Left even_n = Right $ Odd1 even_n
-  _ | Right odd_n = Left  $ Even1 odd_n
--}
 
 %hint
 even_dbl : (n : Nat) -> Even (dbl n)
 even_dbl Z = Even0
 even_dbl (S Z) = Even1 (Odd1 Even0)
-even_dbl (S (S n)) = (
+even_dbl (S (S n)) = even_dbl n |>
   |~~ Even (dbl n)
   ~~> Even (S (S (dbl n)))     ... (Even1 . Odd1)
   ~~> Even (dbl (S n))         ... (\h => rewrite dbl_S n in h)
   ~~> Even (S (S (dbl (S n)))) ... (Even1 . Odd1)
   ~~> Even (dbl (S (S n)))     ... (\h => rewrite dbl_S (S n) in h)
-  ) $ even_dbl n
 
 %hint
 even_dbl_div2 : Even n -> dbl (div2 n) = n
@@ -159,7 +158,7 @@ even_dbl_div2 (Even1 (Odd1 {n = n} even_n)) = Calc $
   |~ dbl (div2 (S (S n)))
   ~~ dbl (S (div2 n))     ... Refl
   ~~ S (S (dbl (div2 n))) ... (dbl_S (div2 n))
-  ~~ S (S n)                 ... (cong (S . S) (even_dbl_div2 even_n))
+  ~~ S (S n)              ... (cong (S . S) (even_dbl_div2 even_n))
 
 
 %hint
@@ -201,25 +200,6 @@ even_dd_sq_div2 even_n = Calc $
   ~~ sq n 
     ... (cong2 (*) (even_dbl_div2 even_n) (even_dbl_div2 even_n))
 
-%hint
-div2_lte : (n : Nat) -> div2 n `LTE`  n
-div2_lte Z = LTEZero
-div2_lte (S Z) = LTEZero
-div2_lte (S (S n')) =
-  LTESucc $ lteSuccRight $ div2_lte n'
-
-%hint
-div2_lt : (n : Nat) -> NonZero n -> div2 n `LT` n
-div2_lt (S Z) SIsNonZero = LTESucc LTEZero
-div2_lt (S (S n')) SIsNonZero =
-   LTESucc $ LTESucc $ div2_lte n'
-
-%hint
-nz_n_imp_nz_m : (m, n : Nat) -> NonZero n -> sq m = dbl (sq n) -> NonZero m
-nz_n_imp_nz_m 0 (S n') SIsNonZero z__s = absurd z__s
-nz_n_imp_nz_m (S k) (S n') SIsNonZero sq_m__d_sq_n = SIsNonZero
-
-
 -- ==========
 -- The most sophisticated part:
 --   NonZero m -> sq m = dbl (sq p) -> Void.
@@ -236,34 +216,25 @@ descent_step m p sq_m__d_sq_p =
   where
 
   even_m : Even m
-  even_m =
-    the (Even m) $
-      even_sq $
-    the (Even (sq m)) $
-      rewrite sq_m__d_sq_p in
-    the (Even (dbl (sq p))) $
-      even_dbl (sq p)
-
-  dd_sq_n__sq_m : dbl (dbl (sq (div2 m))) = sq m
-  dd_sq_n__sq_m = even_dd_sq_div2 even_m
+  even_m = even_dbl (sq p) |>
+    |~~ Even (dbl (sq p))
+    ~~> Even (sq m) ... (\h => rewrite sq_m__d_sq_p in h)
+    ~~> Even m ... (even_sq)
 
   dd_sq_n__d_sq_p : dbl (dbl (sq (div2 m))) = dbl (sq p)
   dd_sq_n__d_sq_p = Calc $
     |~ dbl (dbl (sq (div2 m)))
-    ~~ sq m          ... (dd_sq_n__sq_m)
+    ~~ sq m       ... (even_dd_sq_div2 even_m)
     ~~ dbl (sq p) ... (sq_m__d_sq_p)
 
   d_sq_n__sq_p : dbl (sq (div2 m)) = sq p
   d_sq_n__sq_p = dbl_inj dd_sq_n__d_sq_p
 
   even_p : Even p
-  even_p =
-    the (Even p) $
-      even_sq $
-    the (Even (sq p)) $
-      replace {p = Even} d_sq_n__sq_p $
-    the (Even (dbl (sq (div2 m)))) $
-      even_dbl (sq (div2 m))
+  even_p = even_dbl (sq (div2 m)) |>
+    |~~ Even (dbl (sq (div2 m)))
+    ~~> Even (sq p)  ... (\h => rewrite sym $ d_sq_n__sq_p in h)
+    ~~> Even p       ... (even_sq)
 
   dd_sq_n__ddd_sq_q :
     dbl (dbl (sq (div2 m))) = dbl (dbl (dbl (sq (div2 p))))
@@ -279,6 +250,20 @@ descent_step m p sq_m__d_sq_p =
 
 -- descent
 
+%hint
+div2_lte : (n : Nat) -> div2 n `LTE`  n
+div2_lte Z = LTEZero
+div2_lte (S Z) = LTEZero
+div2_lte (S (S n')) =
+  LTESucc $ lteSuccRight $ div2_lte n'
+
+%hint
+div2_lt : (n : Nat) -> NonZero n -> div2 n `LT` n
+div2_lt (S 0) SIsNonZero = LTESucc LTEZero
+div2_lt (S (S k)) SIsNonZero = div2_lte k |>
+  |~~ (div2 k `LTE` k)
+  ~~> (S (S (div2 k)) `LTE` S (S k)) ... (LTESucc . LTESucc)
+
 descent : (m, p : Nat) ->
   (nz_m : NonZero m) ->
   (h : sq m = dbl (sq p)) ->
@@ -288,9 +273,13 @@ descent (S 0) 0 SIsNonZero s__z (Access rec) =
   uninhabited s__z
 descent (S 0) (S k) SIsNonZero h (Access rec) =
   let
-    sz__ss : (S Z = S (S ((k + k * S k) + (k + k * S k))))
-    sz__ss := replace {p = \t => S Z = S t}
-               (sym $ plusSuccRightSucc (k + k * S k) (k + k * S k)) h
+    sz__ss : (S Z = S (S (dbl (k + k * S k))))
+    sz__ss := Calc $
+      |~ S Z
+      ~~ sq (S Z) ... Refl
+      ~~ dbl (sq (S k)) ... ?j1
+      ~~ dbl (S (k + k * S k)) ... Refl
+      ~~ S (S (dbl (k + k * S k))) ... (dbl_S (k + k * S k))
   in uninhabited sz__ss
 descent (S (S k)) p nz_m h (Access rec) =
   descent (S (div2 k)) (div2 p)
@@ -303,6 +292,11 @@ descent (S (S k)) p nz_m h (Access rec) =
 --    NotZero n and sq m = dbl (sq n)
 --  Hence, sqrt 2 is irrational.
 -- ==========
+
+%hint
+nz_n_imp_nz_m : (m, n : Nat) -> NonZero n -> sq m = dbl (sq n) -> NonZero m
+nz_n_imp_nz_m 0 (S n') SIsNonZero z__s = absurd z__s
+nz_n_imp_nz_m (S k) (S n') SIsNonZero sq_m__d_sq_n = SIsNonZero
 
 irrational_sqrt2 : (m, n : Nat) -> NonZero n -> Not (sq m = dbl (sq n))
 irrational_sqrt2 m (S n') SIsNonZero sq_m__d_sq_n =
