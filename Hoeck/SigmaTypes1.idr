@@ -58,7 +58,7 @@ mapVectMaybe f [] = (0 ** [])
 mapVectMaybe f (x :: xs) with (mapVectMaybe f xs)
   _ | (m' ** ys') with (f x)
       _ | Nothing = (m' ** ys')
-      _ | (Just y) = (1 + m' ** y :: ys')
+      _ | Just y = (1 + m' ** y :: ys')
   
 %hint
 dropVectWhileEx : (p : a -> Bool) -> (xs : Vect m a) -> Exists (\n => Vect n a)
@@ -69,5 +69,5 @@ dropVectWhileEx {m = 1 + m'} p (x :: xs) with (p x)
 
 dropVectWhile : (p : a -> Bool) -> (xs : Vect m a) -> (n ** Vect n a)
 dropVectWhile p xs with (dropVectWhileEx p xs)
-  _ | (Evidence m' xs') with (vectLength xs')
-    _ | (Val m') = (m' ** xs')
+  _ | Evidence m' xs' with (vectLength xs')
+    _ | Val m' = (m' ** xs')
