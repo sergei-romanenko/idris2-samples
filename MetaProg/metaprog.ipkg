@@ -1,0 +1,13 @@
+package metaprog
+
+modules
+  = ElabId
+--  , ElabLang
+--  , ElabEnum1
+--  , ElabEnum2
+  , ElabEven
+--  , ElabSumProd
+--  , ElabCtor
+--  , ElabMonoid
+
+depends = contrib, elab-util
