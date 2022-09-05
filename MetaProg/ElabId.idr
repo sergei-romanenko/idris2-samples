@@ -37,8 +37,20 @@ idString = %runElab mkId
 idBool : Bool -> Bool
 idBool = %runElab mkId
 
-idNat1 : Nat -> Nat
-idNat1 = %runElab (do x <- genSym "x"; pure (\x => x))
-
 mkNat25 : Nat
-mkNat25 = %runElab (pure (the Nat 25))
+mkNat25 = %runElab (pure 25)
+
+-- pw
+
+pwElab : Nat -> Elab (Nat -> Nat)
+pwElab Z = pure (const 1)
+pwElab (S k) = do
+  powerk <- pwElab k
+  pure (\x => mult (powerk x) x)
+
+%macro
+pw : Nat -> Elab (Nat -> Nat)
+pw n = pwElab n
+
+cube : Nat -> Nat
+cube = pw 3

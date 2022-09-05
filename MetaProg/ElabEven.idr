@@ -1,5 +1,7 @@
 module ElabEven
 
+import Decidable.Decidable
+import Data.Maybe
 import Language.Reflection
 -- import Language.Reflection.Syntax
 -- import Language.Reflection.Pretty
@@ -7,6 +9,8 @@ import Language.Reflection
 %language ElabReflection
 
 %default total
+
+-- Even
 
 data Even : Nat -> Type where
   Even0 : Even 0
@@ -25,34 +29,35 @@ notEven1 (Even2 _) impossible
 invEven2 : Even (2 + n) -> Even n
 invEven2 (Even2 even_n) = even_n
 
+-- decEven
+
 decEven : (n : Nat) -> Dec (Even n)
 decEven Z = Yes Even0
 decEven (S Z) = No notEven1
 decEven (S (S n)) with (decEven n)
-  decEven (S (S n)) | Yes even_n = Yes (Even2 even_n)
-  decEven (S (S n)) | No not_even_n =
+  _ | Yes even_n = Yes (Even2 even_n)
+  _ | No not_even_n =
     No (\even_ssn => not_even_n (invEven2 even_ssn))
 
-FromYes : {p : Type} -> (dp : Dec p) -> Type
-FromYes {p} (Yes prf) = p
-FromYes (No contra) = ()
+fromYes : {0 p : Type} -> (dp : Dec p) -> {auto isY : IsYes dp} -> p
+fromYes (Yes prf) {isY = ItIsYes} = prf
 
-fromYes : {0 p : Type} -> (dp : Dec p) -> FromYes dp
-fromYes (Yes prf) = prf
-fromYes (No contra) = ()
+Ev8dec : Even 8
+Ev8dec = fromYes (decEven 8)
 
-Ev8 : Even 8
-Ev8 = fromYes (decEven 8)
+-- maybeEven
 
 maybeEven : (n : Nat) -> Maybe (Even n)
 maybeEven Z = Just Even0
 maybeEven (S Z) = Nothing
 maybeEven (S (S n)) with (maybeEven n)
-  maybeEven (S (S n)) | Nothing = Nothing
-  maybeEven (S (S n)) | (Just even_n) = Just (Even2 even_n)
+  _ | Nothing = Nothing
+  _ | (Just even_n) = Just (Even2 even_n)
 
-mbEv8 : maybeEven 8 = Just (Even2 (Even2 (Even2 (Even2 Even0))))
-mbEv8 = Refl
+Ev8mb : Even 8
+Ev8mb = fromJust $ maybeEven 8
+
+-- elabEven
 
 elabEven : (k : Nat) -> Elab (Even k)
 elabEven Z = pure Even0
