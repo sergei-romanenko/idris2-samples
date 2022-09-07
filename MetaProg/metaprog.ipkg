@@ -6,7 +6,7 @@ modules
 --  , ElabEnum1
 --  , ElabEnum2
   , ElabEven
---  , ElabSumProd
+  , ElabSumProd
 --  , ElabCtor
 --  , ElabMonoid
 
