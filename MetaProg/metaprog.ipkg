@@ -2,7 +2,7 @@ package metaprog
 
 modules
   = ElabId
---  , ElabLang
+  , ElabLang
 --  , ElabEnum1
 --  , ElabEnum2
   , ElabEven

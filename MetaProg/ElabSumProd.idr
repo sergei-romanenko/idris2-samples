@@ -16,18 +16,18 @@ mkProof `(Prelude.Types.Nat) =
 mkProof `(Builtin.Pair ~(a) ~(b)) = do
   p <- mkProof a
   q <- mkProof b
-  pure $ `(MkPair ~(p) ~(q))
+  pure $ `(Builtin.MkPair ~(p) ~(q))
 mkProof `(Prelude.Types.Either ~(a) ~(b)) = do
   left a <|> right b
   where
   left : TTImp -> Elab TTImp
   left a = do
     p <- mkProof a
-    pure $ `(Left ~(p))
+    pure $ `(Prelude.Types.Left ~(p))
   right : TTImp -> Elab TTImp
   right b = do
     q <- mkProof b
-    pure $ `(Right ~(q))
+    pure $ `(Prelude.Types.Right ~(q))
 mkProof g = fail "I don't know how to prove this \{show g}"
 
 autoSumProd : Elab ty
