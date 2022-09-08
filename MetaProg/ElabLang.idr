@@ -12,8 +12,8 @@ import Language.Reflection.Syntax
 
 data Lang : Nat -> Type where
   V    : (i : Fin n) -> Lang n
-  Ap   : (x, y : Lang n) -> Lang n
-  Lam  : (x : Lang (S n)) -> Lang n
+  Ap   : (e1, e2 : Lang n) -> Lang n
+  Lam  : (e : Lang (S n)) -> Lang n
   CstI : (x : Int) -> Lang n
   FFI  : (name : Name) -> Lang n
 
@@ -28,22 +28,25 @@ exampleExpr = Ap (Ap exampleFun (CstI 10)) (CstI 20)
 
 mkLang : (ctxt : Vect k Name) -> (lang : Lang k) -> Elab TTImp
 mkLang ctxt (V i) = do
-  let vn = index i ctxt
-  pure $ var vn
+  let n = index i ctxt
+  -- IVar EmptyFC n
+  pure $ var n
 mkLang ctxt (Ap e1 e2) = do
   t1 <- mkLang ctxt e1
   t2 <- mkLang ctxt e2
   -- pure $ IApp EmptyFC t1 t2
-  pure $ app t1 t2
+  pure $ t1 .$ t2
 mkLang ctxt (Lam e) = do
   n <- genSym "argument"
   body <- mkLang (n :: ctxt) e
   -- pure $ ILam EmptyFC MW ExplicitArg (Just n) (Implicit EmptyFC False) body
   pure $ lambdaArg n .=> body
 mkLang ctxt (CstI x) =
+  -- pure $ IPrimVal EmptyFC (I x)
   pure $ primVal (I x)
 mkLang ctxt (FFI name) =
- pure $ var name
+  -- IVar EmptyFC n
+  pure $ var name
 
 -- elabLang
 
