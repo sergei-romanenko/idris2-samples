@@ -8,6 +8,8 @@ import Language.Reflection.Syntax
 
 %language ElabReflection
 
+%default total
+
 -- Lang
 
 data Lang : Nat -> Type where

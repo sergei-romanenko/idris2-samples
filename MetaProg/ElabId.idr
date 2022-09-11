@@ -6,6 +6,8 @@ import Language.Reflection.Pretty
 
 %language ElabReflection
 
+%default total
+
 mkIdFn : TTImp
 mkIdFn = `(\x => x)
 
